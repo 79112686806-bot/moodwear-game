@@ -357,7 +357,7 @@ function loadUser(){
 
 // ---------- Загрузка заданий ----------
 function loadQuests(){
-  fetch(GAME_API + '?action=getQuests')
+  fetch(GAME_API + '?action=getQuests&userId=' + encodeURIComponent(userId))
     .then(function(r){ return r.json(); })
     .then(function(data){
       var list = document.getElementById('questsList');
