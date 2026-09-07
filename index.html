@@ -8,15 +8,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;700;800&display=swap');
 
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html,body{ margin:0; height:100%; background:#000; }
+html,body{ margin:0; height:100%; background:#000; overflow:hidden; }
 body{
   font-family:'Manrope', Arial, sans-serif;
   color:#F4F4F5;
   max-width:480px;
   margin:0 auto;
-  min-height:100vh;
-  padding-bottom:86px;
+  height:100vh;
   position:relative;
+  display:flex;
+  flex-direction:column;
+}
+.mg-scroll{
+  flex:1;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:24px;
 }
 
 /* ---------- шапка профиля ---------- */
@@ -157,6 +164,7 @@ body{
 </head>
 <body>
 
+<div class="mg-scroll">
 <div class="mg-header">
   <div class="mg-toprow">
     <div class="mg-avatar">🐉</div>
@@ -266,6 +274,8 @@ body{
       </div>
     </div>
   </div>
+</div>
+
 </div>
 
 <div class="mg-nav">
