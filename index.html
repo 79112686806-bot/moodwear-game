@@ -163,7 +163,7 @@ body{
   </div>
   <div class="mg-levelcard">
     <div class="mg-levelrow">
-      <div class="mg-levelname">Уровень 2 · <span>Диалог</span></div>
+      <div class="mg-levelname">Уровень <span id="levelNum">1</span> · <span id="levelName">Первый шаг</span></div>
       <div class="mg-xp" id="xpLabel">65 / 150 XP</div>
     </div>
     <div class="mg-bar"><div class="mg-bar-fill" id="xpBar" style="width:43%;"></div></div>
@@ -291,6 +291,31 @@ var GAME_API = 'https://script.google.com/macros/s/AKfycbwCOtcPOjO4R0p2EHsGH5kdE
 // Иконки/эмодзи по типу задания (совпадает с колонкой "тип" в листе Quests)
 var TYPE_EMOJI = { green: '🟢', yellow: '🟡', red: '🔴', lilac: '🐲' };
 
+// Пороги XP для каждого уровня (совпадает с механикой из плана игры)
+var LEVELS = [
+  { name: 'Первый шаг', from: 0   },
+  { name: 'Диалог',     from: 50  },
+  { name: 'История',    from: 150 },
+  { name: 'Босс-файт',  from: 350 }
+];
+
+function getLevelInfo(xp){
+  var idx = 0;
+  for (var i = 0; i < LEVELS.length; i++){
+    if (xp >= LEVELS[i].from) idx = i;
+  }
+  var current = LEVELS[idx];
+  var next = LEVELS[idx + 1] || null;
+  return {
+    levelNum: idx + 1,
+    name: current.name,
+    from: current.from,
+    to: next ? next.from : null,
+    nextName: next ? next.name : null,
+    isMax: !next
+  };
+}
+
 var tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) { tg.ready(); tg.expand(); }
 
@@ -305,7 +330,7 @@ var userId = tgUser ? tgUser.id : 'demo_' + (localStorage.getItem('mwDemoId') ||
 })());
 var userName = tgUser ? (tgUser.first_name || 'Игрок') : 'Тестовый игрок';
 
-var state = { xp: 0, xpToNext: 150, level: 1 };
+var state = { xp: 0 };
 var completedThisSession = {}; // чтобы не отправить одно и то же задание дважды за сессию
 
 document.getElementById('userName').textContent = userName;
@@ -317,7 +342,7 @@ function loadUser(){
     .then(function(data){
       if(data.found){
         state.xp = Number(data.xp) || 0;
-        state.level = Number(data.level) || 1;
+        // уровень теперь считается на лету из XP, отдельно хранить не нужно
         document.getElementById('userCity').textContent = data.city || '—';
       } else {
         document.getElementById('userCity').textContent = 'Новый игрок';
@@ -372,12 +397,21 @@ function escapeHtml(str){
 }
 
 function renderXp(){
-  document.getElementById('xpLabel').textContent = state.xp + ' / ' + state.xpToNext + ' XP';
-  document.getElementById('xpBar').style.width = Math.min(100, Math.round((state.xp / state.xpToNext) * 100)) + '%';
-  var left = state.xpToNext - state.xp;
-  document.getElementById('toNextLabel').textContent = left > 0
-    ? left + ' XP до следующего уровня'
-    : 'Уровень пройден! 🎉';
+  var info = getLevelInfo(state.xp);
+  document.getElementById('levelNum').textContent = info.levelNum;
+  document.getElementById('levelName').textContent = info.name;
+  document.getElementById('xpLabel').textContent = info.isMax
+    ? state.xp + ' XP'
+    : state.xp + ' / ' + info.to + ' XP';
+
+  var fillPct = info.isMax
+    ? 100
+    : Math.max(0, Math.min(100, Math.round(((state.xp - info.from) / (info.to - info.from)) * 100)));
+  document.getElementById('xpBar').style.width = fillPct + '%';
+
+  document.getElementById('toNextLabel').textContent = info.isMax
+    ? 'Максимальный уровень достигнут 🏆'
+    : (info.to - state.xp) + ' XP до уровня ' + (info.levelNum + 1) + ' «' + info.nextName + '»';
 }
 
 function showPage(name, btn){
@@ -394,6 +428,7 @@ function toggleQuest(btn){
   if(card.classList.contains('done') || completedThisSession[qid]) return;
 
   var xp = parseInt(card.dataset.xp, 10) || 0;
+  var oldLevel = getLevelInfo(state.xp).levelNum;
   completedThisSession[qid] = true;
   card.classList.add('done');
   card.querySelector('.mg-quest-xp').textContent = '+' + xp + ' XP · выполнено';
@@ -401,7 +436,12 @@ function toggleQuest(btn){
   // Оптимистично обновляем экран сразу, не дожидаясь ответа сервера
   state.xp += xp;
   renderXp();
-  showToast('+' + xp + ' XP');
+  var newLevel = getLevelInfo(state.xp).levelNum;
+  if (newLevel > oldLevel){
+    showToast('🎉 Новый уровень: ' + getLevelInfo(state.xp).name);
+  } else {
+    showToast('+' + xp + ' XP');
+  }
 
   // Отправляем реальное начисление в таблицу
   fetch(GAME_API, {
