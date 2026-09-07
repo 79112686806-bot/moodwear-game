@@ -87,6 +87,10 @@ body{
 }
 .mg-quest-btn:active{ transform:scale(.9); }
 .mg-quest.done .mg-quest-btn{ background:#39FF6A; border-color:#39FF6A; color:#0d0d0d; }
+.mg-quest-btn.done-static{
+  background:#39FF6A; border:1.5px solid #39FF6A; color:#0d0d0d;
+  cursor:default;
+}
 
 .mg-quest[data-color="green"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(57,255,106,.4); }
 .mg-quest[data-color="yellow"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(255,201,60,.4); }
@@ -185,32 +189,32 @@ body{
     <h2>Награды по уровням</h2>
     <p class="mg-sub">Открываются по мере роста опыта</p>
 
-    <div class="mg-prize reached">
+    <div class="mg-prize" data-prize-lvl="1" id="prizeLvl1">
       <div class="mg-prize-lvl">1</div>
       <div>
         <div class="mg-prize-title">Промокод −10% на заказ</div>
-        <div class="mg-prize-desc">Получено</div>
+        <div class="mg-prize-desc">—</div>
       </div>
     </div>
-    <div class="mg-prize reached">
+    <div class="mg-prize" data-prize-lvl="2" id="prizeLvl2">
       <div class="mg-prize-lvl">2</div>
       <div>
         <div class="mg-prize-title">Эксклюзивный цвет дракона в коллекции</div>
-        <div class="mg-prize-desc">Получено</div>
+        <div class="mg-prize-desc">—</div>
       </div>
     </div>
-    <div class="mg-prize">
+    <div class="mg-prize" data-prize-lvl="3" id="prizeLvl3">
       <div class="mg-prize-lvl">3</div>
       <div>
         <div class="mg-prize-title">Бесплатная доставка навсегда</div>
-        <div class="mg-prize-desc">85 XP осталось</div>
+        <div class="mg-prize-desc">—</div>
       </div>
     </div>
-    <div class="mg-prize">
+    <div class="mg-prize" data-prize-lvl="4" id="prizeLvl4">
       <div class="mg-prize-lvl">4</div>
       <div>
         <div class="mg-prize-title">Авторская фигурка дракона с номером и подписью</div>
-        <div class="mg-prize-desc">Заблокировано</div>
+        <div class="mg-prize-desc">—</div>
       </div>
     </div>
   </div>
@@ -220,12 +224,12 @@ body{
 <div class="mg-page" id="page-achievements">
   <div class="mg-section">
     <h2>Достижения</h2>
-    <p class="mg-sub">4 из 8 открыто</p>
+    <p class="mg-sub">Пока не подключены к прогрессу — скоро появятся настоящие условия</p>
     <div class="mg-ach-grid">
-      <div class="mg-ach unlocked"><div class="mg-ach-emoji">🧊</div><div class="mg-ach-name">Ледокол</div></div>
-      <div class="mg-ach unlocked"><div class="mg-ach-emoji">🔥</div><div class="mg-ach-name">Марафонец</div></div>
-      <div class="mg-ach unlocked"><div class="mg-ach-emoji">🐉</div><div class="mg-ach-name">Коллекционер</div></div>
-      <div class="mg-ach unlocked"><div class="mg-ach-emoji">🦎</div><div class="mg-ach-name">Хамелеон</div></div>
+      <div class="mg-ach locked"><div class="mg-ach-emoji">🧊</div><div class="mg-ach-name">Ледокол</div></div>
+      <div class="mg-ach locked"><div class="mg-ach-emoji">🔥</div><div class="mg-ach-name">Марафонец</div></div>
+      <div class="mg-ach locked"><div class="mg-ach-emoji">🐉</div><div class="mg-ach-name">Коллекционер</div></div>
+      <div class="mg-ach locked"><div class="mg-ach-emoji">🦎</div><div class="mg-ach-name">Хамелеон</div></div>
       <div class="mg-ach locked"><div class="mg-ach-emoji">📣</div><div class="mg-ach-name">Сарафан</div></div>
       <div class="mg-ach locked"><div class="mg-ach-emoji">🏆</div><div class="mg-ach-name">Легенда квартала</div></div>
       <div class="mg-ach locked"><div class="mg-ach-emoji">🎯</div><div class="mg-ach-name">Акробат</div></div>
@@ -370,17 +374,23 @@ function loadQuests(){
         var color = q.type || 'lilac';
         var emoji = TYPE_EMOJI[color] || '⭐';
         var card = document.createElement('div');
-        card.className = 'mg-quest';
+        card.className = 'mg-quest' + (q.done ? ' done' : '');
         card.dataset.color = color;
         card.dataset.xp = q.xp;
         card.dataset.questId = 'quest_' + i;
+        card.dataset.questText = q.text; // настоящий текст, для сверки с сервером
+        var statusSuffix = q.done ? ' · выполнено' : '';
+        var btnHtml = q.done
+          ? '<div class="mg-quest-btn done-static">✓</div>'
+          : '<button class="mg-quest-btn" onclick="toggleQuest(this)">✓</button>';
         card.innerHTML =
           '<div class="mg-quest-icon">' + emoji + '</div>' +
           '<div class="mg-quest-body">' +
             '<div class="mg-quest-title">' + escapeHtml(q.text) + '</div>' +
-            '<div class="mg-quest-xp">+' + q.xp + ' XP</div>' +
+            '<div class="mg-quest-xp">+' + q.xp + ' XP' + statusSuffix + '</div>' +
           '</div>' +
-          '<button class="mg-quest-btn" onclick="toggleQuest(this)">✓</button>';
+          btnHtml;
+        if(q.done) completedThisSession[card.dataset.questId] = true;
         list.appendChild(card);
       });
     })
@@ -412,6 +422,23 @@ function renderXp(){
   document.getElementById('toNextLabel').textContent = info.isMax
     ? 'Максимальный уровень достигнут 🏆'
     : (info.to - state.xp) + ' XP до уровня ' + (info.levelNum + 1) + ' «' + info.nextName + '»';
+
+  renderPrizes(info.levelNum);
+}
+
+function renderPrizes(currentLevel){
+  for (var lvl = 1; lvl <= 4; lvl++){
+    var el = document.getElementById('prizeLvl' + lvl);
+    if(!el) continue;
+    var descEl = el.querySelector('.mg-prize-desc');
+    if(lvl <= currentLevel){
+      el.classList.add('reached');
+      descEl.textContent = 'Открыто';
+    } else {
+      el.classList.remove('reached');
+      descEl.textContent = 'Откроется на уровне ' + lvl;
+    }
+  }
 }
 
 function showPage(name, btn){
@@ -425,6 +452,7 @@ function showPage(name, btn){
 function toggleQuest(btn){
   var card = btn.closest('.mg-quest');
   var qid = card.dataset.questId;
+  var questText = card.dataset.questText;
   if(card.classList.contains('done') || completedThisSession[qid]) return;
 
   var xp = parseInt(card.dataset.xp, 10) || 0;
@@ -443,7 +471,8 @@ function toggleQuest(btn){
     showToast('+' + xp + ' XP');
   }
 
-  // Отправляем реальное начисление в таблицу
+  // Отправляем реальное начисление в таблицу — сервер сам проверит,
+  // не выполнено ли уже это задание сегодня, и откажет, если да.
   fetch(GAME_API, {
     method: 'POST',
     body: JSON.stringify({
@@ -451,11 +480,19 @@ function toggleQuest(btn){
       userId: userId,
       xp: xp,
       name: userName,
-      city: ''
+      city: '',
+      questText: questText
     })
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
+    if(data.alreadyDone){
+      // Сервер отказал — откатываем оптимистичное начисление обратно
+      state.xp -= xp;
+      renderXp();
+      showToast('Уже выполнено сегодня');
+      return;
+    }
     if(data.success && typeof data.newXp === 'number'){
       state.xp = data.newXp; // подтверждаем реальным значением из таблицы
       renderXp();
