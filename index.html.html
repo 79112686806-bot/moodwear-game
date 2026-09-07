@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MOODWEAR · Игра</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@400;500;700;800&display=swap');
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; height:100%; background:#000; }
+body{
+  font-family:'Manrope', Arial, sans-serif;
+  color:#F4F4F5;
+  max-width:480px;
+  margin:0 auto;
+  min-height:100vh;
+  padding-bottom:86px;
+  position:relative;
+}
+
+/* ---------- шапка профиля ---------- */
+.mg-header{
+  padding:22px 20px 26px;
+  background:
+    radial-gradient(120% 100% at 20% 0%, rgba(170,177,240,0.16), transparent 60%),
+    #000;
+  border-bottom:1px solid #17171a;
+}
+.mg-toprow{ display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+.mg-avatar{
+  width:54px; height:54px; border-radius:16px; flex-shrink:0;
+  background:linear-gradient(135deg,#1a1a1d,#0d0d0d);
+  border:1px solid #2a2a2e;
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px;
+}
+.mg-name{ font-family:'Unbounded', Arial, sans-serif; font-size:15px; font-weight:700; }
+.mg-city{ font-size:12px; color:#7a7a80; margin-top:3px; }
+
+.mg-levelcard{
+  background:#0d0d0d; border:1px solid #232326; border-radius:18px;
+  padding:16px 18px;
+}
+.mg-levelrow{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
+.mg-levelname{ font-family:'Unbounded', Arial, sans-serif; font-size:13px; color:#F4F4F5; }
+.mg-levelname span{ color:#aab1f0; }
+.mg-xp{ font-size:11.5px; color:#7a7a80; }
+.mg-bar{ height:8px; border-radius:6px; background:#1a1a1d; overflow:hidden; position:relative; }
+.mg-bar-fill{
+  height:100%; border-radius:6px;
+  background:linear-gradient(90deg,#aab1f0,#39FF6A);
+  box-shadow:0 0 12px rgba(170,177,240,0.5);
+  transition:width .6s cubic-bezier(.22,1,.36,1);
+}
+.mg-tonext{ font-size:11px; color:#5a5a60; margin-top:8px; }
+
+/* ---------- секции ---------- */
+.mg-section{ padding:22px 20px 4px; }
+.mg-section h2{
+  font-family:'Unbounded', Arial, sans-serif; font-size:15px; margin:0 0 4px;
+}
+.mg-section .mg-sub{ font-size:12.5px; color:#7a7a80; margin:0 0 14px; }
+
+/* ---------- карточки заданий ---------- */
+.mg-quest{
+  display:flex; gap:14px; align-items:flex-start;
+  background:#0d0d0d; border:1px solid #232326; border-radius:16px;
+  padding:15px 16px; margin-bottom:10px;
+  transition:border-color .25s ease, transform .15s ease, opacity .3s ease;
+}
+.mg-quest.done{ opacity:.45; }
+.mg-quest-icon{
+  width:38px; height:38px; border-radius:11px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:17px;
+  background:#151517;
+}
+.mg-quest-body{ flex:1; min-width:0; }
+.mg-quest-title{ font-size:13.5px; font-weight:700; color:#F4F4F5; margin-bottom:3px; line-height:1.35; }
+.mg-quest-xp{ font-size:11.5px; color:#7a7a80; }
+.mg-quest-btn{
+  flex-shrink:0; align-self:center;
+  width:32px; height:32px; border-radius:50%;
+  border:1.5px solid #33333a; background:transparent;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:all .2s ease; color:#7a7a80;
+}
+.mg-quest-btn:active{ transform:scale(.9); }
+.mg-quest.done .mg-quest-btn{ background:#39FF6A; border-color:#39FF6A; color:#0d0d0d; }
+
+.mg-quest[data-color="green"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(57,255,106,.4); }
+.mg-quest[data-color="yellow"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(255,201,60,.4); }
+.mg-quest[data-color="red"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(255,92,92,.4); }
+.mg-quest[data-color="lilac"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(170,177,240,.4); }
+
+/* ---------- достижения ---------- */
+.mg-ach-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.mg-ach{
+  background:#0d0d0d; border:1px solid #232326; border-radius:14px;
+  padding:14px 8px; text-align:center; position:relative; overflow:hidden;
+}
+.mg-ach.locked{ opacity:.35; }
+.mg-ach-emoji{ font-size:22px; margin-bottom:8px; }
+.mg-ach-name{ font-size:10.5px; font-weight:700; line-height:1.3; }
+.mg-ach.unlocked{ border-color:rgba(170,177,240,.5); box-shadow:0 0 24px -14px rgba(170,177,240,.7); }
+
+/* ---------- награды ---------- */
+.mg-prize{
+  display:flex; gap:12px; align-items:center;
+  background:#0d0d0d; border:1px solid #232326; border-radius:16px;
+  padding:14px 16px; margin-bottom:10px;
+}
+.mg-prize.reached{ border-color:rgba(57,255,106,.45); }
+.mg-prize-lvl{
+  width:40px; height:40px; border-radius:12px; flex-shrink:0;
+  background:#151517; display:flex; align-items:center; justify-content:center;
+  font-family:'Unbounded', Arial, sans-serif; font-size:13px; font-weight:900; color:#5a5a60;
+}
+.mg-prize.reached .mg-prize-lvl{ color:#39FF6A; }
+.mg-prize-title{ font-size:13px; font-weight:700; margin-bottom:2px; }
+.mg-prize-desc{ font-size:11.5px; color:#7a7a80; }
+
+/* ---------- нижняя навигация ---------- */
+.mg-nav{
+  position:fixed; left:50%; bottom:0; transform:translateX(-50%);
+  width:100%; max-width:480px;
+  display:flex; justify-content:space-around;
+  background:rgba(10,10,11,.92); backdrop-filter:blur(14px);
+  border-top:1px solid #1c1c1f;
+  padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+}
+.mg-nav-item{
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  color:#5a5a60; font-size:10.5px; background:none; border:none;
+  cursor:pointer; padding:4px 10px; transition:color .2s ease;
+}
+.mg-nav-item.active{ color:#F4F4F5; }
+.mg-nav-icon{ font-size:19px; }
+
+/* ---------- тост при выполнении ---------- */
+.mg-toast{
+  position:fixed; left:50%; top:18px; transform:translateX(-50%) translateY(-30px);
+  background:#F4F4F5; color:#0d0d0d; font-family:'Unbounded', Arial, sans-serif;
+  font-size:12px; font-weight:700; padding:11px 20px; border-radius:24px;
+  opacity:0; transition:all .35s cubic-bezier(.22,1,.36,1); pointer-events:none;
+  white-space:nowrap; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+.mg-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+.mg-page{ display:none; }
+.mg-page.active{ display:block; }
+</style>
+</head>
+<body>
+
+<div class="mg-header">
+  <div class="mg-toprow">
+    <div class="mg-avatar">🐉</div>
+    <div>
+      <div class="mg-name" id="userName">Загрузка…</div>
+      <div class="mg-city" id="userCity">—</div>
+    </div>
+  </div>
+  <div class="mg-levelcard">
+    <div class="mg-levelrow">
+      <div class="mg-levelname">Уровень 2 · <span>Диалог</span></div>
+      <div class="mg-xp" id="xpLabel">65 / 150 XP</div>
+    </div>
+    <div class="mg-bar"><div class="mg-bar-fill" id="xpBar" style="width:43%;"></div></div>
+    <div class="mg-tonext" id="toNextLabel">85 XP до уровня 3 «История»</div>
+  </div>
+</div>
+
+<!-- ===== СТРАНИЦА: ЗАДАНИЯ ===== -->
+<div class="mg-page active" id="page-quests">
+  <div class="mg-section">
+    <h2>Сегодняшние задания</h2>
+    <p class="mg-sub">Новые появляются каждый день в 9:00</p>
+    <div id="questsList">
+      <p class="mg-sub" id="questsLoading">Загружаю задания…</p>
+    </div>
+  </div>
+
+  <div class="mg-section">
+    <h2>Награды по уровням</h2>
+    <p class="mg-sub">Открываются по мере роста опыта</p>
+
+    <div class="mg-prize reached">
+      <div class="mg-prize-lvl">1</div>
+      <div>
+        <div class="mg-prize-title">Промокод −10% на заказ</div>
+        <div class="mg-prize-desc">Получено</div>
+      </div>
+    </div>
+    <div class="mg-prize reached">
+      <div class="mg-prize-lvl">2</div>
+      <div>
+        <div class="mg-prize-title">Эксклюзивный цвет дракона в коллекции</div>
+        <div class="mg-prize-desc">Получено</div>
+      </div>
+    </div>
+    <div class="mg-prize">
+      <div class="mg-prize-lvl">3</div>
+      <div>
+        <div class="mg-prize-title">Бесплатная доставка навсегда</div>
+        <div class="mg-prize-desc">85 XP осталось</div>
+      </div>
+    </div>
+    <div class="mg-prize">
+      <div class="mg-prize-lvl">4</div>
+      <div>
+        <div class="mg-prize-title">Авторская фигурка дракона с номером и подписью</div>
+        <div class="mg-prize-desc">Заблокировано</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== СТРАНИЦА: ДОСТИЖЕНИЯ ===== -->
+<div class="mg-page" id="page-achievements">
+  <div class="mg-section">
+    <h2>Достижения</h2>
+    <p class="mg-sub">4 из 8 открыто</p>
+    <div class="mg-ach-grid">
+      <div class="mg-ach unlocked"><div class="mg-ach-emoji">🧊</div><div class="mg-ach-name">Ледокол</div></div>
+      <div class="mg-ach unlocked"><div class="mg-ach-emoji">🔥</div><div class="mg-ach-name">Марафонец</div></div>
+      <div class="mg-ach unlocked"><div class="mg-ach-emoji">🐉</div><div class="mg-ach-name">Коллекционер</div></div>
+      <div class="mg-ach unlocked"><div class="mg-ach-emoji">🦎</div><div class="mg-ach-name">Хамелеон</div></div>
+      <div class="mg-ach locked"><div class="mg-ach-emoji">📣</div><div class="mg-ach-name">Сарафан</div></div>
+      <div class="mg-ach locked"><div class="mg-ach-emoji">🏆</div><div class="mg-ach-name">Легенда квартала</div></div>
+      <div class="mg-ach locked"><div class="mg-ach-emoji">🎯</div><div class="mg-ach-name">Акробат</div></div>
+      <div class="mg-ach locked"><div class="mg-ach-emoji">☄️</div><div class="mg-ach-name">Метеор</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== СТРАНИЦА: КАРТА (заглушка) ===== -->
+<div class="mg-page" id="page-map">
+  <div class="mg-section" style="text-align:center; padding-top:60px;">
+    <div style="font-size:40px; margin-bottom:14px;">🗺️</div>
+    <h2>Карта зон скоро здесь</h2>
+    <p class="mg-sub">Мы собираем данные о самых оживлённых местах города — появится в одном из следующих обновлений</p>
+  </div>
+</div>
+
+<!-- ===== СТРАНИЦА: ПРОФИЛЬ ===== -->
+<div class="mg-page" id="page-profile">
+  <div class="mg-section">
+    <h2>Профиль</h2>
+    <div class="mg-prize">
+      <div class="mg-prize-lvl">👤</div>
+      <div>
+        <div class="mg-prize-title">Карина Н.</div>
+        <div class="mg-prize-desc">В игре с 12 августа · 2 браслета</div>
+      </div>
+    </div>
+    <div class="mg-prize">
+      <div class="mg-prize-lvl">📣</div>
+      <div>
+        <div class="mg-prize-title">Твой реферальный код: KARINA10</div>
+        <div class="mg-prize-desc">Приведи друга — получи вознаграждение</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mg-nav">
+  <button class="mg-nav-item active" data-page="quests" onclick="showPage('quests', this)">
+    <span class="mg-nav-icon">📋</span>Задания
+  </button>
+  <button class="mg-nav-item" data-page="achievements" onclick="showPage('achievements', this)">
+    <span class="mg-nav-icon">🏅</span>Ачивки
+  </button>
+  <button class="mg-nav-item" data-page="map" onclick="showPage('map', this)">
+    <span class="mg-nav-icon">🗺️</span>Карта
+  </button>
+  <button class="mg-nav-item" data-page="profile" onclick="showPage('profile', this)">
+    <span class="mg-nav-icon">👤</span>Профиль
+  </button>
+</div>
+
+<div class="mg-toast" id="toast">+5 XP</div>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+// ==========================================================
+// АДРЕС ВАШЕГО БЭКЕНДА (Google Apps Script Web App)
+// ==========================================================
+var GAME_API = 'https://script.google.com/macros/s/AKfycbwCOtcPOjO4R0p2EHsGH5kdE7p3RohQ5zx6BaV8IhAsyqk5ZmBd9v_2o-tMUwxapvIP/exec';
+
+// Иконки/эмодзи по типу задания (совпадает с колонкой "тип" в листе Quests)
+var TYPE_EMOJI = { green: '🟢', yellow: '🟡', red: '🔴', lilac: '🐲' };
+
+var tg = window.Telegram ? window.Telegram.WebApp : null;
+if (tg) { tg.ready(); tg.expand(); }
+
+// Если открыто внутри Telegram — берём настоящий ID пользователя.
+// Если открыто просто в браузере (тестируете с компьютера) — подставляем демо-ID,
+// чтобы можно было проверить работу без Telegram.
+var tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user : null;
+var userId = tgUser ? tgUser.id : 'demo_' + (localStorage.getItem('mwDemoId') || (function(){
+  var id = 'test' + Math.floor(Math.random() * 100000);
+  localStorage.setItem('mwDemoId', id);
+  return id;
+})());
+var userName = tgUser ? (tgUser.first_name || 'Игрок') : 'Тестовый игрок';
+
+var state = { xp: 0, xpToNext: 150, level: 1 };
+var completedThisSession = {}; // чтобы не отправить одно и то же задание дважды за сессию
+
+document.getElementById('userName').textContent = userName;
+
+// ---------- Загрузка профиля ----------
+function loadUser(){
+  fetch(GAME_API + '?action=getUser&userId=' + encodeURIComponent(userId))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.found){
+        state.xp = Number(data.xp) || 0;
+        state.level = Number(data.level) || 1;
+        document.getElementById('userCity').textContent = data.city || '—';
+      } else {
+        document.getElementById('userCity').textContent = 'Новый игрок';
+      }
+      renderXp();
+    })
+    .catch(function(err){
+      console.error('Ошибка загрузки профиля:', err);
+      document.getElementById('userCity').textContent = 'Ошибка соединения';
+    });
+}
+
+// ---------- Загрузка заданий ----------
+function loadQuests(){
+  fetch(GAME_API + '?action=getQuests')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var list = document.getElementById('questsList');
+      list.innerHTML = '';
+      if(!data.quests || !data.quests.length){
+        list.innerHTML = '<p class="mg-sub">Заданий пока нет — загляните позже</p>';
+        return;
+      }
+      data.quests.forEach(function(q, i){
+        var color = q.type || 'lilac';
+        var emoji = TYPE_EMOJI[color] || '⭐';
+        var card = document.createElement('div');
+        card.className = 'mg-quest';
+        card.dataset.color = color;
+        card.dataset.xp = q.xp;
+        card.dataset.questId = 'quest_' + i;
+        card.innerHTML =
+          '<div class="mg-quest-icon">' + emoji + '</div>' +
+          '<div class="mg-quest-body">' +
+            '<div class="mg-quest-title">' + escapeHtml(q.text) + '</div>' +
+            '<div class="mg-quest-xp">+' + q.xp + ' XP</div>' +
+          '</div>' +
+          '<button class="mg-quest-btn" onclick="toggleQuest(this)">✓</button>';
+        list.appendChild(card);
+      });
+    })
+    .catch(function(err){
+      console.error('Ошибка загрузки заданий:', err);
+      document.getElementById('questsList').innerHTML = '<p class="mg-sub">Не удалось загрузить задания</p>';
+    });
+}
+
+function escapeHtml(str){
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderXp(){
+  document.getElementById('xpLabel').textContent = state.xp + ' / ' + state.xpToNext + ' XP';
+  document.getElementById('xpBar').style.width = Math.min(100, Math.round((state.xp / state.xpToNext) * 100)) + '%';
+  var left = state.xpToNext - state.xp;
+  document.getElementById('toNextLabel').textContent = left > 0
+    ? left + ' XP до следующего уровня'
+    : 'Уровень пройден! 🎉';
+}
+
+function showPage(name, btn){
+  document.querySelectorAll('.mg-page').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.mg-nav-item').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+// ---------- Выполнение задания ----------
+function toggleQuest(btn){
+  var card = btn.closest('.mg-quest');
+  var qid = card.dataset.questId;
+  if(card.classList.contains('done') || completedThisSession[qid]) return;
+
+  var xp = parseInt(card.dataset.xp, 10) || 0;
+  completedThisSession[qid] = true;
+  card.classList.add('done');
+  card.querySelector('.mg-quest-xp').textContent = '+' + xp + ' XP · выполнено';
+
+  // Оптимистично обновляем экран сразу, не дожидаясь ответа сервера
+  state.xp += xp;
+  renderXp();
+  showToast('+' + xp + ' XP');
+
+  // Отправляем реальное начисление в таблицу
+  fetch(GAME_API, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'addXp',
+      userId: userId,
+      xp: xp,
+      name: userName,
+      city: ''
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(data.success && typeof data.newXp === 'number'){
+      state.xp = data.newXp; // подтверждаем реальным значением из таблицы
+      renderXp();
+    }
+  })
+  .catch(function(err){
+    console.error('Не удалось сохранить XP:', err);
+    showToast('Не сохранилось, попробуйте позже');
+  });
+}
+
+function showToast(text){
+  var t = document.getElementById('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(window._mgToastTimer);
+  window._mgToastTimer = setTimeout(function(){ t.classList.remove('show'); }, 1600);
+}
+
+loadUser();
+loadQuests();
+</script>
+
+</body>
+</html>
