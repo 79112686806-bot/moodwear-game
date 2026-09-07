@@ -341,7 +341,7 @@ document.getElementById('userName').textContent = userName;
 
 // ---------- Загрузка профиля ----------
 function loadUser(){
-  fetch(GAME_API + '?action=getUser&userId=' + encodeURIComponent(userId))
+  fetch(GAME_API + '?action=getUser&userId=' + encodeURIComponent(userId), { cache: 'no-store' })
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(data.found){
@@ -361,7 +361,7 @@ function loadUser(){
 
 // ---------- Загрузка заданий ----------
 function loadQuests(){
-  fetch(GAME_API + '?action=getQuests&userId=' + encodeURIComponent(userId))
+  fetch(GAME_API + '?action=getQuests&userId=' + encodeURIComponent(userId) + '&_t=' + Date.now(), { cache: 'no-store' })
     .then(function(r){ return r.json(); })
     .then(function(data){
       var list = document.getElementById('questsList');
