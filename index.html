@@ -221,6 +221,12 @@ body{
   font-family:'Unbounded', Arial, sans-serif; font-size:13px; font-weight:900; color:#5a5a60;
 }
 .mg-prize.reached .mg-prize-lvl{ color:#39FF6A; }
+
+/* ---------- эффекты аватара ---------- */
+#profileAvatarWrap{ font-size:20px; transition:box-shadow .3s ease, border-color .3s ease; border:1.5px solid transparent; }
+#profileAvatarWrap.avatar-effect-gold{ box-shadow:0 0 16px rgba(255,201,60,0.8); border-color:#FFC93C; }
+#profileAvatarWrap.avatar-effect-neon{ box-shadow:0 0 16px rgba(170,177,240,0.8); border-color:#aab1f0; }
+#profileAvatarWrap.avatar-effect-fire{ box-shadow:0 0 16px rgba(255,92,92,0.8); border-color:#FF5C5C; }
 .mg-prize-title{ font-size:13px; font-weight:700; margin-bottom:2px; }
 .mg-prize-desc{ font-size:11.5px; color:#7a7a80; }
 
@@ -493,17 +499,24 @@ body{
   <div class="mg-section">
     <h2>Профиль</h2>
     <div class="mg-prize">
-      <div class="mg-prize-lvl">👤</div>
+      <div class="mg-prize-lvl" id="profileAvatarWrap"><span id="profileAvatar">🐉</span></div>
       <div>
-        <div class="mg-prize-title">Карина Н.</div>
-        <div class="mg-prize-desc">В игре с 12 августа · 2 браслета</div>
+        <div class="mg-prize-title" id="profileNameCity">Загрузка…</div>
+        <div class="mg-prize-desc" id="profileRegDate">—</div>
       </div>
     </div>
     <div class="mg-prize">
       <div class="mg-prize-lvl">📣</div>
       <div>
-        <div class="mg-prize-title">Твой реферальный код: KARINA10</div>
-        <div class="mg-prize-desc">Приведи друга — получи вознаграждение</div>
+        <div class="mg-prize-title">Твой реферальный код: <span id="profileRefCode">—</span></div>
+        <div class="mg-prize-desc">Делись ссылкой — за каждого нового игрока получишь монетки. Денег это не приносит, деньги дают только коды-призы из магазина.</div>
+      </div>
+    </div>
+    <div class="mg-prize" id="profileRefLinkRow" style="display:none;">
+      <div class="mg-prize-lvl">🔗</div>
+      <div>
+        <div class="mg-prize-title">Твоя ссылка</div>
+        <div class="mg-prize-desc" id="profileRefLink" style="word-break:break-all;">—</div>
       </div>
     </div>
   </div>
@@ -533,28 +546,28 @@ body{
         <div class="mg-prize" data-prize-lvl="1" id="prizeLvl1">
           <div class="mg-prize-lvl">1</div>
           <div>
-            <div class="mg-prize-title">Промокод −10% на заказ</div>
+            <div class="mg-prize-title">Скидка −15% на заказ + фирменный стикерпак</div>
             <div class="mg-prize-desc">—</div>
           </div>
         </div>
         <div class="mg-prize" data-prize-lvl="2" id="prizeLvl2">
           <div class="mg-prize-lvl">2</div>
           <div>
-            <div class="mg-prize-title">Эксклюзивный цвет дракона в коллекции</div>
+            <div class="mg-prize-title">Эксклюзивный цвет дракона + бесплатная доставка навсегда</div>
             <div class="mg-prize-desc">—</div>
           </div>
         </div>
         <div class="mg-prize" data-prize-lvl="3" id="prizeLvl3">
           <div class="mg-prize-lvl">3</div>
           <div>
-            <div class="mg-prize-title">Бесплатная доставка навсегда</div>
+            <div class="mg-prize-title">Подарочный сертификат Ozon или Wildberries 500 ₽</div>
             <div class="mg-prize-desc">—</div>
           </div>
         </div>
         <div class="mg-prize" data-prize-lvl="4" id="prizeLvl4">
           <div class="mg-prize-lvl">4</div>
           <div>
-            <div class="mg-prize-title">Авторская фигурка дракона с номером и подписью</div>
+            <div class="mg-prize-title">Час обучения 3D-печати лично от основателя + именная фигурка дракона с автографом</div>
             <div class="mg-prize-desc">—</div>
           </div>
         </div>
@@ -616,10 +629,11 @@ var TYPE_EMOJI = { green: '🟢', yellow: '🟡', red: '🔴', lilac: '🐲' };
 
 // Пороги XP для каждого уровня (совпадает с механикой из плана игры)
 var LEVELS = [
-  { name: 'Первый шаг', from: 0   },
-  { name: 'Диалог',     from: 50  },
-  { name: 'История',    from: 150 },
-  { name: 'Босс-файт',  from: 350 }
+  { name: 'Знакомство',  from: 0   },
+  { name: 'Первый шаг',  from: 30  },
+  { name: 'Диалог',      from: 100 },
+  { name: 'История',     from: 250 },
+  { name: 'Босс-файт',   from: 500 }
 ];
 
 function getLevelInfo(xp){
@@ -630,7 +644,7 @@ function getLevelInfo(xp){
   var current = LEVELS[idx];
   var next = LEVELS[idx + 1] || null;
   return {
-    levelNum: idx + 1,
+    levelNum: idx,
     name: current.name,
     from: current.from,
     to: next ? next.from : null,
@@ -711,7 +725,11 @@ function chooseSignal(signal){
 
 // ---------- Загрузка профиля ----------
 function loadUser(){
-  fetch(GAME_API + '?action=getUser&userId=' + encodeURIComponent(userId), { cache: 'no-store' })
+  var params = new URLSearchParams(window.location.search);
+  var refCodeParam = params.get('ref') || '';
+  var refParam = refCodeParam ? ('&ref=' + encodeURIComponent(refCodeParam)) : '';
+
+  fetch(GAME_API + '?action=getUser&userId=' + encodeURIComponent(userId) + refParam, { cache: 'no-store' })
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(data.found){
@@ -721,6 +739,7 @@ function loadUser(){
         document.getElementById('userCity').textContent = data.city || '—';
         renderSubscriptionStatus(data.hasSubscription, data.subscriptionUntil);
         renderCoinBalance(Number(data.coins) || 0);
+        renderProfile(data);
       } else {
         document.getElementById('userCity').textContent = 'Новый игрок';
       }
@@ -731,6 +750,34 @@ function loadUser(){
       console.error('Ошибка загрузки профиля:', err);
       document.getElementById('userCity').textContent = 'Ошибка соединения';
     });
+}
+
+function renderProfile(data){
+  var nameCityEl = document.getElementById('profileNameCity');
+  if(nameCityEl) nameCityEl.textContent = userName + (data.city ? ' · ' + data.city : '');
+
+  var regEl = document.getElementById('profileRegDate');
+  if(regEl) regEl.textContent = data.registrationDate ? ('В игре с ' + data.registrationDate) : '—';
+
+  var avatarEl = document.getElementById('profileAvatar');
+  if(avatarEl) avatarEl.textContent = data.avatar || '🐉';
+
+  var avatarWrap = document.getElementById('profileAvatarWrap');
+  if(avatarWrap){
+    avatarWrap.classList.remove('avatar-effect-gold', 'avatar-effect-neon', 'avatar-effect-fire');
+    if(data.avatarEffect) avatarWrap.classList.add('avatar-effect-' + data.avatarEffect);
+  }
+
+  var refCodeEl = document.getElementById('profileRefCode');
+  if(refCodeEl && data.refCode) refCodeEl.textContent = data.refCode;
+
+  var refLinkRow = document.getElementById('profileRefLinkRow');
+  var refLinkEl = document.getElementById('profileRefLink');
+  if(refLinkRow && refLinkEl && data.refCode){
+    var link = window.location.origin + window.location.pathname + '?ref=' + data.refCode;
+    refLinkEl.textContent = link;
+    refLinkRow.style.display = '';
+  }
 }
 
 function renderSubscriptionStatus(hasSubscription, until){
@@ -850,7 +897,12 @@ function buildShopItemCard(item){
     btnHtml = '<button class="mg-shop-buy" ' + (canAfford ? '' : 'disabled') + ' onclick="buyShopItem(\'' + item.id + '\', this)">Купить</button>';
   }
 
+  var previewHtml = item.type === 'avatar' && item.value
+    ? '<div class="mg-quest-icon" style="flex-shrink:0;">' + item.value + '</div>'
+    : '';
+
   card.innerHTML =
+    previewHtml +
     '<div class="mg-shop-body">' +
       '<div class="mg-shop-name">' + escapeHtml(item.name) + '</div>' +
       '<div class="mg-shop-desc">' + escapeHtml(item.description) + '</div>' +
@@ -876,6 +928,17 @@ function buyShopItem(itemId, btn){
         showToast('✅ Ваш код: ' + data.code);
       } else if(data.type === 'manual'){
         showToast('✅ Заявка принята, мы свяжемся с вами');
+      } else if(data.type === 'avatar'){
+        var avatarEl = document.getElementById('profileAvatar');
+        if(avatarEl) avatarEl.textContent = data.value;
+        showToast('✅ Новый аватар применён!');
+      } else if(data.type === 'avatareffect'){
+        var avatarWrap = document.getElementById('profileAvatarWrap');
+        if(avatarWrap){
+          avatarWrap.classList.remove('avatar-effect-gold', 'avatar-effect-neon', 'avatar-effect-fire');
+          avatarWrap.classList.add('avatar-effect-' + data.value);
+        }
+        showToast('✅ Эффект применён!');
       } else {
         showToast('✅ Готово!');
       }
