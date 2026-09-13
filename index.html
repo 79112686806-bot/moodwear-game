@@ -268,6 +268,20 @@ body{
   color:#aab1f0; text-transform:uppercase; letter-spacing:.03em;
   margin-bottom:4px;
 }
+.mg-code-row{ display:flex; gap:8px; margin-top:6px; }
+.mg-code-input{
+  flex:1; height:44px; border-radius:12px; border:1.5px solid #2a2a2e;
+  background:#151517; color:#F4F4F5; padding:0 14px; font-size:13px;
+  font-family:'Manrope', Arial, sans-serif;
+}
+.mg-code-input:focus{ outline:none; border-color:#aab1f0; }
+.mg-code-btn{
+  height:44px; padding:0 18px; border-radius:12px; border:none;
+  background:#F4F4F5; color:#0d0d0d; font-family:'Unbounded', Arial, sans-serif;
+  font-size:12px; font-weight:700; cursor:pointer; transition:background .2s ease;
+}
+.mg-code-btn:hover{ background:#aab1f0; }
+.mg-code-btn:active{ transform:scale(.97); }
 
 .mg-page{
   display:none;
@@ -363,6 +377,22 @@ body{
         <div class="mg-prize-desc">Приведи друга — получи вознаграждение</div>
       </div>
     </div>
+  </div>
+
+  <div class="mg-section">
+    <h2>Подписка</h2>
+    <div class="mg-prize" id="subStatusCard">
+      <div class="mg-prize-lvl">🔒</div>
+      <div>
+        <div class="mg-prize-title" id="subStatusTitle">Нет активной подписки</div>
+        <div class="mg-prize-desc" id="subStatusDesc">Карта зон и награды по уровням закрыты</div>
+      </div>
+    </div>
+    <div class="mg-code-row">
+      <input type="text" id="promoCodeInput" class="mg-code-input" placeholder="Код с упаковки или с сайта">
+      <button class="mg-code-btn" onclick="submitPromoCode()">Активировать</button>
+    </div>
+    <p class="mg-sub" id="promoCodeMsg"></p>
   </div>
 
   <div class="mg-section">
@@ -488,6 +518,7 @@ function startWithDemoUser(){
   document.getElementById('userName').textContent = userName;
   document.getElementById('userName').classList.remove('mg-pulse-text');
   loadUser();
+  checkPromoInUrl();
   checkAndShowSignalModal();
 }
 
@@ -500,6 +531,7 @@ if (window.vkBridge) {
       document.getElementById('userName').textContent = userName;
       document.getElementById('userName').classList.remove('mg-pulse-text');
       loadUser();
+      checkPromoInUrl();
       checkAndShowSignalModal();
     })
     .catch(function(err){
@@ -546,6 +578,7 @@ function loadUser(){
         state.xp = Number(data.xp) || 0;
         // уровень теперь считается на лету из XP, отдельно хранить не нужно
         document.getElementById('userCity').textContent = data.city || '—';
+        renderSubscriptionStatus(data.hasSubscription, data.subscriptionUntil);
       } else {
         document.getElementById('userCity').textContent = 'Новый игрок';
       }
@@ -555,6 +588,66 @@ function loadUser(){
       console.error('Ошибка загрузки профиля:', err);
       document.getElementById('userCity').textContent = 'Ошибка соединения';
     });
+}
+
+function renderSubscriptionStatus(hasSubscription, until){
+  var card = document.getElementById('subStatusCard');
+  var title = document.getElementById('subStatusTitle');
+  var desc = document.getElementById('subStatusDesc');
+  if(!card) return;
+  if(hasSubscription){
+    card.querySelector('.mg-prize-lvl').textContent = '✅';
+    title.textContent = 'Подписка активна';
+    desc.textContent = 'До ' + until + ' — карта и награды открыты';
+  } else {
+    card.querySelector('.mg-prize-lvl').textContent = '🔒';
+    title.textContent = 'Нет активной подписки';
+    desc.textContent = 'Карта зон и награды по уровням закрыты';
+  }
+}
+
+// ---------- Активация кода (QR с браслета или купленного на сайте) ----------
+function submitPromoCode(){
+  var input = document.getElementById('promoCodeInput');
+  var msg = document.getElementById('promoCodeMsg');
+  var code = input.value.trim();
+  if(!code){ return; }
+  msg.textContent = 'Проверяю…';
+
+  fetch(GAME_API, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'redeemCode', userId: userId, code: code, name: userName, city: '' })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(data.success){
+      msg.textContent = '✅ Активировано до ' + data.subscriptionUntil;
+      input.value = '';
+      renderSubscriptionStatus(true, data.subscriptionUntil);
+    } else if(data.reason === 'already_used'){
+      msg.textContent = 'Этот код уже использован';
+    } else if(data.reason === 'not_found'){
+      msg.textContent = 'Код не найден, проверьте написание';
+    } else {
+      msg.textContent = 'Не удалось активировать, попробуйте ещё раз';
+    }
+  })
+  .catch(function(){
+    msg.textContent = 'Ошибка соединения, попробуйте позже';
+  });
+}
+
+// Если игра открыта по ссылке с QR-кода (?promo=КОД) — подставляем код автоматически
+function checkPromoInUrl(){
+  var params = new URLSearchParams(window.location.search);
+  var promo = params.get('promo');
+  if(promo){
+    var input = document.getElementById('promoCodeInput');
+    if(input){
+      input.value = promo;
+      submitPromoCode();
+    }
+  }
 }
 
 // ---------- Загрузка заданий ----------
