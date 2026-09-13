@@ -295,7 +295,7 @@ body{
 
 <div class="mg-toast" id="toast">+5 XP</div>
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 <script>
 // ==========================================================
 // АДРЕС ВАШЕГО БЭКЕНДА (Google Apps Script Web App)
@@ -330,24 +330,44 @@ function getLevelInfo(xp){
   };
 }
 
-var tg = window.Telegram ? window.Telegram.WebApp : null;
-if (tg) { tg.ready(); tg.expand(); }
-
-// Если открыто внутри Telegram — берём настоящий ID пользователя.
-// Если открыто просто в браузере (тестируете с компьютера) — подставляем демо-ID,
-// чтобы можно было проверить работу без Telegram.
-var tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user : null;
-var userId = tgUser ? tgUser.id : 'demo_' + (localStorage.getItem('mwDemoId') || (function(){
-  var id = 'test' + Math.floor(Math.random() * 100000);
-  localStorage.setItem('mwDemoId', id);
-  return id;
-})());
-var userName = tgUser ? (tgUser.first_name || 'Игрок') : 'Тестовый игрок';
-
 var state = { xp: 0 };
 var completedThisSession = {}; // чтобы не отправить одно и то же задание дважды за сессию
+var userId = null;
+var userName = 'Игрок';
 
-document.getElementById('userName').textContent = userName;
+// ---------- Получение пользователя через VK Bridge ----------
+// Если открыто внутри VK — берём настоящий ID через VK Bridge.
+// Если открыто просто в браузере (тестируете с компьютера) — подставляем демо-ID,
+// чтобы можно было проверить работу без VK.
+function startWithDemoUser(){
+  userId = 'demo_' + (localStorage.getItem('mwDemoId') || (function(){
+    var id = 'test' + Math.floor(Math.random() * 100000);
+    localStorage.setItem('mwDemoId', id);
+    return id;
+  })());
+  userName = 'Тестовый игрок';
+  document.getElementById('userName').textContent = userName;
+  loadUser();
+  loadQuests();
+}
+
+if (window.vkBridge) {
+  vkBridge.send('VKWebAppInit')
+    .then(function(){ return vkBridge.send('VKWebAppGetUserInfo'); })
+    .then(function(data){
+      userId = String(data.id);
+      userName = data.first_name || 'Игрок';
+      document.getElementById('userName').textContent = userName;
+      loadUser();
+      loadQuests();
+    })
+    .catch(function(err){
+      console.error('VK Bridge недоступен, включаю тестовый режим:', err);
+      startWithDemoUser();
+    });
+} else {
+  startWithDemoUser();
+}
 
 // ---------- Загрузка профиля ----------
 function loadUser(){
@@ -522,8 +542,8 @@ function showToast(text){
   window._mgToastTimer = setTimeout(function(){ t.classList.remove('show'); }, 1600);
 }
 
-loadUser();
-loadQuests();
+// loadUser() и loadQuests() теперь запускаются автоматически выше,
+// сразу после того как VK Bridge (или тестовый режим) определит игрока.
 </script>
 
 </body>
