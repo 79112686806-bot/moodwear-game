@@ -61,7 +61,10 @@ body{
 }
 .mg-levelrow{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
 .mg-levelname{ font-family:'Unbounded', Arial, sans-serif; font-size:13px; color:#F4F4F5; }
-.mg-levelname span{ color:#aab1f0; }
+.mg-levelname span{
+  color:#aab1f0;
+  text-shadow:0 0 10px rgba(170,177,240,0.7), 0 0 20px rgba(170,177,240,0.35);
+}
 .mg-xp{ font-size:11.5px; color:#7a7a80; }
 .mg-bar{ height:8px; border-radius:6px; background:#1a1a1d; overflow:hidden; position:relative; }
 .mg-bar-fill{
@@ -86,7 +89,7 @@ body{
   padding:15px 16px; margin-bottom:10px;
   transition:border-color .25s ease, transform .15s ease, opacity .3s ease;
 }
-.mg-quest.done{ opacity:.45; }
+.mg-quest.mg-faded{ opacity:.45; }
 .mg-quest-icon{
   width:38px; height:38px; border-radius:11px; flex-shrink:0;
   display:flex; align-items:center; justify-content:center; font-size:17px;
@@ -212,6 +215,55 @@ body{
   white-space:nowrap; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,.4);
 }
 .mg-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ---------- модалка выбора браслета дня ---------- */
+.mg-signal-overlay{
+  position:fixed; inset:0; z-index:80;
+  background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
+  display:none; align-items:flex-end; justify-content:center;
+  opacity:0; transition:opacity .25s ease;
+}
+.mg-signal-overlay.show{ display:flex; opacity:1; }
+.mg-signal-modal{
+  width:100%; max-width:420px;
+  background:#0d0d0d; border:1px solid #232326;
+  border-top-left-radius:24px; border-top-right-radius:24px;
+  padding:28px 24px calc(28px + env(safe-area-inset-bottom));
+  text-align:center;
+  transform:translateY(30px);
+  transition:transform .3s cubic-bezier(.22,1,.36,1);
+  box-shadow:0 -20px 60px rgba(170,177,240,0.15);
+}
+.mg-signal-overlay.show .mg-signal-modal{ transform:translateY(0); }
+.mg-signal-emoji{ font-size:34px; margin-bottom:10px; }
+.mg-signal-modal h3{ font-family:'Unbounded', Arial, sans-serif; font-size:16px; margin:0 0 6px; color:#F4F4F5; }
+.mg-signal-modal .mg-sub{ margin:0 0 20px; }
+.mg-signal-btns{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+.mg-signal-btn{
+  height:48px; border-radius:24px; border:1.5px solid #33333a;
+  background:#151517; color:#F4F4F5; font-family:'Unbounded', Arial, sans-serif;
+  font-size:13px; font-weight:700; cursor:pointer;
+  transition:all .2s ease;
+}
+.mg-signal-btn[data-signal="green"]:hover, .mg-signal-btn[data-signal="green"]:active{
+  border-color:#39FF6A; box-shadow:0 0 20px rgba(57,255,106,0.4); background:#0f1a12;
+}
+.mg-signal-btn[data-signal="yellow"]:hover, .mg-signal-btn[data-signal="yellow"]:active{
+  border-color:#FFC93C; box-shadow:0 0 20px rgba(255,201,60,0.4); background:#1a1710;
+}
+.mg-signal-btn[data-signal="red"]:hover, .mg-signal-btn[data-signal="red"]:active{
+  border-color:#FF5C5C; box-shadow:0 0 20px rgba(255,92,92,0.4); background:#1a1111;
+}
+.mg-signal-skip{
+  background:none; border:none; color:#5a5a60; font-size:12.5px;
+  cursor:pointer; padding:8px;
+}
+.mg-bonus-card{ border-color:rgba(170,177,240,0.5); box-shadow:0 0 24px -14px rgba(170,177,240,0.6); }
+.mg-bonus-badge{
+  display:inline-block; font-family:'Unbounded', Arial, sans-serif; font-size:9.5px;
+  color:#aab1f0; text-transform:uppercase; letter-spacing:.03em;
+  margin-bottom:4px;
+}
 
 .mg-page{
   display:none;
@@ -363,6 +415,20 @@ body{
 
 <div class="mg-toast" id="toast">+5 XP</div>
 
+<div class="mg-signal-overlay" id="signalOverlay">
+  <div class="mg-signal-modal">
+    <div class="mg-signal-emoji">🐉</div>
+    <h3>Какой браслет сегодня на тебе?</h3>
+    <p class="mg-sub">Подберём бонусное задание под твой сигнал</p>
+    <div class="mg-signal-btns">
+      <button class="mg-signal-btn" data-signal="green" onclick="chooseSignal('green')">🟢 OPEN</button>
+      <button class="mg-signal-btn" data-signal="yellow" onclick="chooseSignal('yellow')">🟡 VIBE</button>
+      <button class="mg-signal-btn" data-signal="red" onclick="chooseSignal('red')">🔴 OFF</button>
+    </div>
+    <button class="mg-signal-skip" onclick="chooseSignal('')">Пропустить сегодня</button>
+  </div>
+</div>
+
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 <script>
 // ==========================================================
@@ -417,7 +483,7 @@ function startWithDemoUser(){
   document.getElementById('userName').textContent = userName;
   document.getElementById('userName').classList.remove('mg-pulse-text');
   loadUser();
-  loadQuests();
+  checkAndShowSignalModal();
 }
 
 if (window.vkBridge) {
@@ -429,7 +495,7 @@ if (window.vkBridge) {
       document.getElementById('userName').textContent = userName;
       document.getElementById('userName').classList.remove('mg-pulse-text');
       loadUser();
-      loadQuests();
+      checkAndShowSignalModal();
     })
     .catch(function(err){
       console.error('VK Bridge недоступен, включаю тестовый режим:', err);
@@ -437,6 +503,33 @@ if (window.vkBridge) {
     });
 } else {
   startWithDemoUser();
+}
+
+// ---------- Выбор браслета дня ----------
+function getTodayDateStr(){
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getTodaySignal(){
+  var savedDate = localStorage.getItem('mwSignalDate');
+  if(savedDate !== getTodayDateStr()) return null;
+  return localStorage.getItem('mwSignalValue') || '';
+}
+
+function checkAndShowSignalModal(){
+  var savedDate = localStorage.getItem('mwSignalDate');
+  if(savedDate === getTodayDateStr()){
+    loadQuests(); // сегодня уже спрашивали
+    return;
+  }
+  document.getElementById('signalOverlay').classList.add('show');
+}
+
+function chooseSignal(signal){
+  localStorage.setItem('mwSignalDate', getTodayDateStr());
+  localStorage.setItem('mwSignalValue', signal);
+  document.getElementById('signalOverlay').classList.remove('show');
+  loadQuests();
 }
 
 // ---------- Загрузка профиля ----------
@@ -461,7 +554,9 @@ function loadUser(){
 
 // ---------- Загрузка заданий ----------
 function loadQuests(){
-  fetch(GAME_API + '?action=getQuests&userId=' + encodeURIComponent(userId) + '&_t=' + Date.now(), { cache: 'no-store' })
+  var signal = getTodaySignal();
+  var signalParam = signal ? ('&signal=' + encodeURIComponent(signal)) : '';
+  fetch(GAME_API + '?action=getQuests&userId=' + encodeURIComponent(userId) + signalParam + '&_t=' + Date.now(), { cache: 'no-store' })
     .then(function(r){ return r.json(); })
     .then(function(data){
       var list = document.getElementById('questsList');
@@ -474,22 +569,25 @@ function loadQuests(){
         var color = q.type || 'lilac';
         var emoji = TYPE_EMOJI[color] || '⭐';
         var card = document.createElement('div');
-        card.className = 'mg-quest' + (q.done ? ' done' : '');
+        card.className = 'mg-quest' + (q.done ? ' done mg-faded' : '');
         card.dataset.color = color;
         card.dataset.xp = q.xp;
         card.dataset.questId = 'quest_' + i;
         card.dataset.questText = q.text; // настоящий текст, для сверки с сервером
         var statusSuffix = q.done ? ' · выполнено' : '';
+        var bonusBadge = q.bonus ? '<span class="mg-bonus-badge">✨ бонус за сигнал</span>' : '';
         var btnHtml = q.done
           ? '<div class="mg-quest-btn done-static">✓</div>'
           : '<button class="mg-quest-btn" onclick="toggleQuest(this)">✓</button>';
         card.innerHTML =
           '<div class="mg-quest-icon">' + emoji + '</div>' +
           '<div class="mg-quest-body">' +
+            bonusBadge +
             '<div class="mg-quest-title">' + escapeHtml(q.text) + '</div>' +
             '<div class="mg-quest-xp">+' + q.xp + ' XP' + statusSuffix + '</div>' +
           '</div>' +
           btnHtml;
+        if(q.bonus) card.classList.add('mg-bonus-card');
         if(q.done) completedThisSession[card.dataset.questId] = true;
         list.appendChild(card);
       });
@@ -562,6 +660,7 @@ function toggleQuest(btn){
   card.querySelector('.mg-quest-xp').textContent = '+' + xp + ' XP · выполнено';
   btn.classList.add('mg-glow-burst');
   setTimeout(function(){ btn.classList.remove('mg-glow-burst'); }, 650);
+  setTimeout(function(){ card.classList.add('mg-faded'); }, 700);
 
   // Оптимистично обновляем экран сразу, не дожидаясь ответа сервера
   state.xp += xp;
