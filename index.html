@@ -222,6 +222,15 @@ body{
 }
 .mg-prize.reached .mg-prize-lvl{ color:#39FF6A; }
 
+.mg-copy-btn{
+  flex-shrink:0; width:28px; height:28px; border-radius:8px;
+  border:1.5px solid #2a2a2e; background:#151517; color:#F4F4F5;
+  font-size:12px; cursor:pointer; transition:all .2s ease;
+}
+.mg-copy-btn:hover{ border-color:#aab1f0; }
+.mg-copy-btn:active{ transform:scale(.9); }
+.mg-copy-btn.mg-copied{ background:#39FF6A; border-color:#39FF6A; color:#0d0d0d; }
+
 /* ---------- эффекты аватара ---------- */
 #profileAvatarWrap{ font-size:20px; transition:box-shadow .3s ease, border-color .3s ease; border:1.5px solid transparent; }
 #profileAvatarWrap.avatar-effect-gold{ box-shadow:0 0 16px rgba(255,201,60,0.8); border-color:#FFC93C; }
@@ -507,15 +516,21 @@ body{
     </div>
     <div class="mg-prize">
       <div class="mg-prize-lvl">📣</div>
-      <div>
-        <div class="mg-prize-title">Твой реферальный код: <span id="profileRefCode">—</span></div>
+      <div style="flex:1; min-width:0;">
+        <div class="mg-prize-title" style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+          <span>Твой код: <span id="profileRefCode">—</span></span>
+          <button class="mg-copy-btn" onclick="copyToClipboard(document.getElementById('profileRefCode').textContent, this)">📋</button>
+        </div>
         <div class="mg-prize-desc">Делись ссылкой — за каждого нового игрока получишь монетки. Денег это не приносит, деньги дают только коды-призы из магазина.</div>
       </div>
     </div>
     <div class="mg-prize" id="profileRefLinkRow" style="display:none;">
       <div class="mg-prize-lvl">🔗</div>
-      <div>
-        <div class="mg-prize-title">Твоя ссылка</div>
+      <div style="flex:1; min-width:0;">
+        <div class="mg-prize-title" style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+          <span>Твоя ссылка</span>
+          <button class="mg-copy-btn" onclick="copyToClipboard(document.getElementById('profileRefLink').textContent, this)">📋</button>
+        </div>
         <div class="mg-prize-desc" id="profileRefLink" style="word-break:break-all;">—</div>
       </div>
     </div>
@@ -751,6 +766,42 @@ function loadUser(){
       console.error('Ошибка загрузки профиля:', err);
       document.getElementById('userCity').textContent = 'Ошибка соединения';
     });
+}
+
+function copyToClipboard(text, btn){
+  if(!text || text === '—') return;
+
+  function onCopied(){
+    if(!btn) return;
+    var original = btn.textContent;
+    btn.textContent = '✓';
+    btn.classList.add('mg-copied');
+    setTimeout(function(){
+      btn.textContent = original;
+      btn.classList.remove('mg-copied');
+    }, 1200);
+  }
+
+  if(window.vkBridge){
+    vkBridge.send('VKWebAppCopyText', { text: text })
+      .then(onCopied)
+      .catch(function(){
+        // если VK Bridge отказал — пробуем обычный способ браузера
+        fallbackCopy(text, onCopied);
+      });
+  } else {
+    fallbackCopy(text, onCopied);
+  }
+}
+
+function fallbackCopy(text, onDone){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(onDone).catch(function(){
+      showToast('Не удалось скопировать');
+    });
+  } else {
+    showToast('Не удалось скопировать');
+  }
 }
 
 function renderProfile(data){
