@@ -623,6 +623,7 @@ body{
 // АДРЕС ВАШЕГО БЭКЕНДА (Google Apps Script Web App)
 // ==========================================================
 var GAME_API = 'https://script.google.com/macros/s/AKfycbwCOtcPOjO4R0p2EHsGH5kdE7p3RohQ5zx6BaV8IhAsyqk5ZmBd9v_2o-tMUwxapvIP/exec';
+var VK_APP_URL = 'https://vk.ru/app54768835'; // адрес самого VK-приложения — для реферальных ссылок
 
 // Иконки/эмодзи по типу задания (совпадает с колонкой "тип" в листе Quests)
 var TYPE_EMOJI = { green: '🟢', yellow: '🟡', red: '🔴', lilac: '🐲' };
@@ -774,7 +775,7 @@ function renderProfile(data){
   var refLinkRow = document.getElementById('profileRefLinkRow');
   var refLinkEl = document.getElementById('profileRefLink');
   if(refLinkRow && refLinkEl && data.refCode){
-    var link = window.location.origin + window.location.pathname + '?ref=' + data.refCode;
+    var link = VK_APP_URL + '?ref=' + data.refCode;
     refLinkEl.textContent = link;
     refLinkRow.style.display = '';
   }
