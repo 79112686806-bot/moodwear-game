@@ -214,6 +214,18 @@ body{
 }
 .mg-shop-subtab.active{ border-color:#aab1f0; color:#F4F4F5; box-shadow:0 0 14px -4px rgba(170,177,240,0.6); }
 
+.mg-shop-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+.mg-shop-tile{
+  aspect-ratio:1; border-radius:16px; background:#0d0d0d; border:1px solid #232326;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:10px; text-align:center; cursor:pointer; transition:all .2s ease;
+}
+.mg-shop-tile:hover{ border-color:#aab1f0; }
+.mg-shop-tile:active{ transform:scale(.95); }
+.mg-shop-tile-icon{ font-size:24px; }
+.mg-shop-tile-name{ font-size:10px; font-weight:700; line-height:1.25; color:#F4F4F5; }
+.mg-shop-tile-price{ font-size:10px; color:#FFC93C; font-family:'Unbounded', Arial, sans-serif; }
+
 .mg-quest[data-color="green"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(57,255,106,.4); }
 .mg-quest[data-color="yellow"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(255,201,60,.4); }
 .mg-quest[data-color="red"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(255,92,92,.4); }
@@ -536,13 +548,13 @@ body{
     <div class="mg-section">
       <h2>Доступно всем</h2>
       <p class="mg-sub">Можно купить прямо сейчас, подписка не нужна</p>
-      <div id="shopListFree"><p class="mg-sub">Загружаю магазин…</p></div>
+      <div id="shopListFree" class="mg-shop-grid"><p class="mg-sub">Загружаю магазин…</p></div>
     </div>
 
     <div class="mg-section">
       <h2>Только по подписке</h2>
       <p class="mg-sub">Видно всем, но купить можно только с активной подпиской</p>
-      <div id="shopListSub"></div>
+      <div id="shopListSub" class="mg-shop-grid"></div>
     </div>
   </div>
 
@@ -563,81 +575,74 @@ body{
 
 <!-- ===== СТРАНИЦА: ПРОФИЛЬ ===== -->
 <div class="mg-page" id="page-profile">
-  <div class="mg-section">
-    <h2>Профиль</h2>
-    <div class="mg-prize">
-      <div class="mg-prize-lvl">📅</div>
-      <div>
-        <div class="mg-prize-title">В игре с</div>
-        <div class="mg-prize-desc" id="profileRegDate">—</div>
+
+  <div class="mg-shop-subtabs">
+    <button class="mg-shop-subtab active" id="ptabProfileBtn" onclick="showProfileSubtab('profile')">👤 Профиль</button>
+    <button class="mg-shop-subtab" id="ptabSubBtn" onclick="showProfileSubtab('subscription')">🔐 Подписка</button>
+    <button class="mg-shop-subtab" id="ptabRewardsBtn" onclick="showProfileSubtab('rewards')">🏆 Мои награды</button>
+  </div>
+
+  <div id="ptabProfile">
+    <div class="mg-section">
+      <h2>Профиль</h2>
+      <div class="mg-prize">
+        <div class="mg-prize-lvl">📅</div>
+        <div>
+          <div class="mg-prize-title">В игре с</div>
+          <div class="mg-prize-desc" id="profileRegDate">—</div>
+        </div>
       </div>
-    </div>
-    <div class="mg-prize">
-      <div class="mg-prize-lvl">📣</div>
-      <div style="flex:1; min-width:0;">
-        <div class="mg-prize-title">Приведи друга — получи 20 монеток</div>
-        <div class="mg-prize-desc">Ссылку для друзей копируй сверху, рядом с аватаром. Это не деньги — деньги дают только коды-призы из магазина.</div>
+      <div class="mg-prize">
+        <div class="mg-prize-lvl">📣</div>
+        <div style="flex:1; min-width:0;">
+          <div class="mg-prize-title">Приведи друга — получи 20 монеток</div>
+          <div class="mg-prize-desc">Ссылку для друзей копируй сверху, рядом с аватаром. Это не деньги — деньги дают только коды-призы из магазина.</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="mg-section">
-    <h2>Подписка</h2>
-    <div class="mg-prize" id="subStatusCard">
-      <div class="mg-prize-lvl">🔒</div>
-      <div>
-        <div class="mg-prize-title" id="subStatusTitle">Нет активной подписки</div>
-        <div class="mg-prize-desc" id="subStatusDesc">Карта зон и награды по уровням закрыты</div>
-      </div>
-    </div>
-    <div class="mg-code-row">
-      <input type="text" id="promoCodeInput" class="mg-code-input" placeholder="Код с упаковки или с сайта">
-      <button class="mg-code-btn" onclick="submitPromoCode()">Активировать</button>
-    </div>
-    <p class="mg-sub" id="promoCodeMsg"></p>
-  </div>
-
-  <div class="mg-section">
-    <h2>Награды по уровням</h2>
-    <p class="mg-sub">Открываются по мере роста опыта</p>
-
-    <div class="mg-lock-wrap locked" id="prizesLockWrap">
-      <div class="mg-lock-content">
-        <div class="mg-prize" data-prize-lvl="1" id="prizeLvl1">
-          <div class="mg-prize-lvl">1</div>
-          <div>
-            <div class="mg-prize-title">Скидка −15% на заказ + фирменный стикерпак</div>
-            <div class="mg-prize-desc">—</div>
-          </div>
-        </div>
-        <div class="mg-prize" data-prize-lvl="2" id="prizeLvl2">
-          <div class="mg-prize-lvl">2</div>
-          <div>
-            <div class="mg-prize-title">Эксклюзивный цвет дракона + бесплатная доставка навсегда</div>
-            <div class="mg-prize-desc">—</div>
-          </div>
-        </div>
-        <div class="mg-prize" data-prize-lvl="3" id="prizeLvl3">
-          <div class="mg-prize-lvl">3</div>
-          <div>
-            <div class="mg-prize-title">Подарочный сертификат Ozon или Wildberries 500 ₽</div>
-            <div class="mg-prize-desc">—</div>
-          </div>
-        </div>
-        <div class="mg-prize" data-prize-lvl="4" id="prizeLvl4">
-          <div class="mg-prize-lvl">4</div>
-          <div>
-            <div class="mg-prize-title">Час обучения 3D-печати лично от основателя + именная фигурка дракона с автографом</div>
-            <div class="mg-prize-desc">—</div>
-          </div>
+  <div id="ptabSubscription" style="display:none;">
+    <div class="mg-section">
+      <h2>Подписка</h2>
+      <div class="mg-prize" id="subStatusCard">
+        <div class="mg-prize-lvl">🔒</div>
+        <div>
+          <div class="mg-prize-title" id="subStatusTitle">Нет активной подписки</div>
+          <div class="mg-prize-desc" id="subStatusDesc">Карта зон и награды по уровням закрыты</div>
         </div>
       </div>
-      <div class="mg-lock-overlay">
-        <div class="mg-lock-icon">🔒</div>
-        <div class="mg-lock-text">Доступно после подписки или покупки браслетов</div>
+      <div class="mg-code-row">
+        <input type="text" id="promoCodeInput" class="mg-code-input" placeholder="Код с упаковки или с сайта">
+        <button class="mg-code-btn" onclick="submitPromoCode()">Активировать</button>
       </div>
+      <p class="mg-sub" id="promoCodeMsg"></p>
     </div>
   </div>
+
+  <div id="ptabRewards" style="display:none;">
+    <div class="mg-section">
+      <h2>Награды по уровням</h2>
+      <p class="mg-sub">Нажми, когда откроется, чтобы забрать</p>
+
+      <div class="mg-lock-wrap locked" id="prizesLockWrap">
+        <div class="mg-lock-content" id="levelPrizesList">
+          <!-- заполняется через JS: renderLevelPrizes() -->
+        </div>
+        <div class="mg-lock-overlay">
+          <div class="mg-lock-icon">🔒</div>
+          <div class="mg-lock-text">Доступно после подписки или покупки браслетов</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mg-section">
+      <h2>Мои коды и покупки</h2>
+      <p class="mg-sub">Все коды из магазина сохраняются здесь — если пропустили уведомление, посмотрите тут</p>
+      <div id="myRewardsList"><p class="mg-sub">Загружаю…</p></div>
+    </div>
+  </div>
+
 </div>
 
 </div>
@@ -690,6 +695,17 @@ body{
   </div>
 </div>
 
+<div class="mg-signal-overlay" id="shopDetailOverlay">
+  <div class="mg-signal-modal">
+    <div class="mg-signal-emoji" id="shopDetailIcon">🎁</div>
+    <h3 id="shopDetailTitle">Название приза</h3>
+    <p class="mg-sub" id="shopDetailDesc">Описание того, как активируется приз</p>
+    <p class="mg-sub" id="shopDetailPrice" style="color:#FFC93C; font-family:'Unbounded', Arial, sans-serif; margin-bottom:14px;">🪙 0</p>
+    <div id="shopDetailAction"></div>
+    <button class="mg-signal-skip" onclick="closeShopDetail()">Закрыть</button>
+  </div>
+</div>
+
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 <script>
 // ==========================================================
@@ -727,7 +743,7 @@ function getLevelInfo(xp){
   };
 }
 
-var state = { xp: 0, coins: 0, hasSubscription: false, avatar: '🐉', avatarEffect: '', ownedAvatars: [], ownedEffects: [] };
+var state = { xp: 0, coins: 0, hasSubscription: false, avatar: '🐉', avatarEffect: '', ownedAvatars: [], ownedEffects: [], claimedLevels: [] };
 var completedThisSession = {}; // чтобы не отправить одно и то же задание дважды за сессию
 var userId = null;
 var userName = 'Игрок';
@@ -949,6 +965,7 @@ function renderProfile(data){
   state.avatarEffect = data.avatarEffect || '';
   state.ownedAvatars = data.ownedAvatars || [];
   state.ownedEffects = data.ownedEffects || [];
+  state.claimedLevels = data.claimedLevels || [];
 
   var avatarWrap = document.getElementById('headerAvatarWrap');
   if(avatarWrap){
@@ -1075,10 +1092,11 @@ function loadShopItems(){
         var target;
         if(isAvatarType){
           target = item.requiresSubscription ? avatarSubList : avatarFreeList;
+          target.appendChild(buildShopItemCard(item));
         } else {
           target = item.requiresSubscription ? subList : freeList;
+          target.appendChild(buildShopItemTile(item));
         }
-        target.appendChild(buildShopItemCard(item));
       });
       if(!avatarFreeList.children.length) avatarFreeList.innerHTML = '<p class="mg-sub">Пока пусто</p>';
       if(!avatarSubList.children.length) avatarSubList.innerHTML = '<p class="mg-sub">Пока пусто</p>';
@@ -1094,6 +1112,45 @@ function showShopSubtab(name){
   document.getElementById('shopSubtabAvatars').style.display = (name === 'avatars') ? '' : 'none';
   document.getElementById('subtabPrizesBtn').classList.toggle('active', name === 'prizes');
   document.getElementById('subtabAvatarsBtn').classList.toggle('active', name === 'avatars');
+}
+
+var SHOP_TYPE_ICON = { code: '🎫', manual: '📦', instant: '⚡' };
+
+function buildShopItemTile(item){
+  var tile = document.createElement('div');
+  tile.className = 'mg-shop-tile';
+  var locked = item.requiresSubscription && !state.hasSubscription;
+  tile.innerHTML =
+    '<div class="mg-shop-tile-icon">' + (SHOP_TYPE_ICON[item.type] || '🎁') + '</div>' +
+    '<div class="mg-shop-tile-name">' + escapeHtml(item.name) + '</div>' +
+    '<div class="mg-shop-tile-price">🪙 ' + item.price + (locked ? ' 🔒' : '') + '</div>';
+  tile.onclick = function(){ openShopDetail(item); };
+  return tile;
+}
+
+function openShopDetail(item){
+  var overlay = document.getElementById('shopDetailOverlay');
+  document.getElementById('shopDetailIcon').textContent = SHOP_TYPE_ICON[item.type] || '🎁';
+  document.getElementById('shopDetailTitle').textContent = item.name;
+  document.getElementById('shopDetailDesc').textContent = item.description;
+  document.getElementById('shopDetailPrice').textContent = '🪙 ' + item.price;
+
+  var locked = item.requiresSubscription && !state.hasSubscription;
+  var canAfford = state.coins >= item.price;
+  var actionArea = document.getElementById('shopDetailAction');
+
+  if(locked){
+    actionArea.innerHTML = '<div class="mg-shop-locked-badge">🔒 Доступно только по подписке</div>';
+  } else {
+    actionArea.innerHTML = '<button class="mg-code-btn" ' + (canAfford ? '' : 'disabled') +
+      ' onclick="buyShopItem(\'' + item.id + '\', this)">' +
+      (canAfford ? 'Купить за ' + item.price + ' 🪙' : 'Не хватает монеток') + '</button>';
+  }
+  overlay.classList.add('show');
+}
+
+function closeShopDetail(){
+  document.getElementById('shopDetailOverlay').classList.remove('show');
 }
 
 function buildShopItemCard(item){
@@ -1162,7 +1219,10 @@ function buyShopItem(itemId, btn){
       } else {
         showToast('✅ Готово!');
       }
+      var detailOverlay = document.getElementById('shopDetailOverlay');
+      if(detailOverlay && detailOverlay.classList.contains('show')) closeShopDetail();
       loadShopItems(); // перерисовать магазин с новым балансом
+      if(document.getElementById('ptabRewards').style.display !== 'none') loadMyRewards();
     } else {
       btn.disabled = false;
       btn.textContent = 'Купить';
@@ -1253,19 +1313,115 @@ function renderXp(){
   renderPrizes(info.levelNum);
 }
 
+var LEVEL_PRIZE_META = {
+  1: { icon: '🎟️', title: 'Скидка −15% на заказ + фирменный стикерпак' },
+  2: { icon: '🐲', title: 'Эксклюзивный цвет дракона + бесплатная доставка навсегда' },
+  3: { icon: '💳', title: 'Подарочный сертификат Ozon или Wildberries 500 ₽' },
+  4: { icon: '🎓', title: 'Час обучения 3D-печати лично от основателя + именная фигурка дракона с автографом' }
+};
+
 function renderPrizes(currentLevel){
+  var list = document.getElementById('levelPrizesList');
+  if(!list) return;
+  list.innerHTML = '';
   for (var lvl = 1; lvl <= 4; lvl++){
-    var el = document.getElementById('prizeLvl' + lvl);
-    if(!el) continue;
-    var descEl = el.querySelector('.mg-prize-desc');
-    if(lvl <= currentLevel){
-      el.classList.add('reached');
-      descEl.textContent = 'Открыто';
+    var meta = LEVEL_PRIZE_META[lvl];
+    var claimed = state.claimedLevels.indexOf(String(lvl)) !== -1;
+    var reached = lvl <= currentLevel;
+
+    var card = document.createElement('div');
+    card.className = 'mg-prize' + (claimed ? ' reached' : '');
+
+    var rightHtml;
+    if(claimed){
+      rightHtml = '<div class="mg-shop-locked-badge">✓ Получено</div>';
+    } else if(reached){
+      rightHtml = '<button class="mg-shop-buy" onclick="claimLevelPrize(' + lvl + ', this)">Забрать</button>';
     } else {
-      el.classList.remove('reached');
-      descEl.textContent = 'Откроется на уровне ' + lvl;
+      rightHtml = '<div class="mg-shop-locked-badge">Ур. ' + lvl + '</div>';
     }
+
+    card.innerHTML =
+      '<div class="mg-prize-lvl">' + meta.icon + '</div>' +
+      '<div style="flex:1; min-width:0;">' +
+        '<div class="mg-prize-title">' + meta.title + '</div>' +
+        '<div class="mg-prize-desc">' + (claimed ? 'Уже забрано' : (reached ? 'Доступно!' : 'Откроется на уровне ' + lvl)) + '</div>' +
+      '</div>' +
+      rightHtml;
+    list.appendChild(card);
   }
+}
+
+function claimLevelPrize(level, btn){
+  btn.disabled = true;
+  btn.textContent = 'Забираю…';
+  fetch(GAME_API, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'claimLevelPrize', userId: userId, level: level })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(data.success){
+      state.claimedLevels.push(String(level));
+      showToast('🎉 Награда получена!');
+      renderPrizes(getLevelInfo(state.xp).levelNum);
+      loadMyRewards();
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Забрать';
+      if(data.reason === 'already_claimed') showToast('Уже забрано ранее');
+      else showToast('Не удалось забрать награду');
+    }
+  })
+  .catch(function(){
+    btn.disabled = false;
+    btn.textContent = 'Забрать';
+    showToast('Ошибка соединения');
+  });
+}
+
+// ---------- Под-вкладки профиля ----------
+function showProfileSubtab(name){
+  document.getElementById('ptabProfile').style.display = (name === 'profile') ? '' : 'none';
+  document.getElementById('ptabSubscription').style.display = (name === 'subscription') ? '' : 'none';
+  document.getElementById('ptabRewards').style.display = (name === 'rewards') ? '' : 'none';
+  document.getElementById('ptabProfileBtn').classList.toggle('active', name === 'profile');
+  document.getElementById('ptabSubBtn').classList.toggle('active', name === 'subscription');
+  document.getElementById('ptabRewardsBtn').classList.toggle('active', name === 'rewards');
+  if(name === 'rewards') loadMyRewards();
+}
+
+// ---------- Мои награды (история) ----------
+var REWARD_TYPE_ICON = { code: '🎫', manual: '📦', level: '🏆' };
+function loadMyRewards(){
+  var list = document.getElementById('myRewardsList');
+  if(!list) return;
+  fetch(GAME_API + '?action=getMyRewards&userId=' + encodeURIComponent(userId) + '&_t=' + Date.now(), { cache: 'no-store' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      list.innerHTML = '';
+      if(!data.rewards || !data.rewards.length){
+        list.innerHTML = '<p class="mg-sub">Пока пусто — покупки и награды появятся здесь</p>';
+        return;
+      }
+      data.rewards.forEach(function(r){
+        var card = document.createElement('div');
+        card.className = 'mg-prize';
+        var valueLine = r.value ? ('<div class="mg-prize-desc" style="color:#aab1f0;">' + escapeHtml(String(r.value)) + '</div>') : '';
+        card.innerHTML =
+          '<div class="mg-prize-lvl">' + (REWARD_TYPE_ICON[r.type] || '🎁') + '</div>' +
+          '<div style="flex:1; min-width:0;">' +
+            '<div class="mg-prize-title">' + escapeHtml(r.title) + '</div>' +
+            '<div class="mg-prize-desc">' + escapeHtml(r.description || '') + '</div>' +
+            valueLine +
+            '<div class="mg-prize-desc" style="opacity:.6;">' + escapeHtml(r.date || '') + '</div>' +
+          '</div>';
+        list.appendChild(card);
+      });
+    })
+    .catch(function(){
+      list.innerHTML = '<p class="mg-sub">Не удалось загрузить</p>';
+    });
 }
 
 function showPage(name, btn){
