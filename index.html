@@ -214,7 +214,7 @@ body{
 }
 .mg-shop-subtab.active{ border-color:#aab1f0; color:#F4F4F5; box-shadow:0 0 14px -4px rgba(170,177,240,0.6); }
 
-.mg-shop-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+.mg-shop-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
 .mg-shop-tile{
   aspect-ratio:1; border-radius:16px; background:#0d0d0d; border:1px solid #232326;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
@@ -225,6 +225,9 @@ body{
 .mg-shop-tile-icon{ font-size:24px; }
 .mg-shop-tile-name{ font-size:10px; font-weight:700; line-height:1.25; color:#F4F4F5; }
 .mg-shop-tile-price{ font-size:10px; color:#FFC93C; font-family:'Unbounded', Arial, sans-serif; }
+.mg-shop-tile.mg-owned{ opacity:.5; }
+.mg-shop-tile.mg-owned .mg-shop-tile-price{ color:#7a7a80; }
+.mg-shop-howto{ font-size:11px; color:#aab1f0; margin:2px 0 10px; line-height:1.4; }
 
 .mg-quest[data-color="green"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(57,255,106,.4); }
 .mg-quest[data-color="yellow"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(255,201,60,.4); }
@@ -600,27 +603,19 @@ body{
         </div>
       </div>
     </div>
-  </div>
 
-  <div id="ptabSubscription" style="display:none;">
     <div class="mg-section">
-      <h2>Подписка</h2>
-      <div class="mg-prize" id="subStatusCard">
-        <div class="mg-prize-lvl">🔒</div>
-        <div>
-          <div class="mg-prize-title" id="subStatusTitle">Нет активной подписки</div>
-          <div class="mg-prize-desc" id="subStatusDesc">Карта зон и награды по уровням закрыты</div>
-        </div>
-      </div>
+      <h2>Контакты</h2>
+      <p class="mg-sub">Нужны, чтобы отправить призы и код на скидку — без них некоторые награды не сможем выдать</p>
       <div class="mg-code-row">
-        <input type="text" id="promoCodeInput" class="mg-code-input" placeholder="Код с упаковки или с сайта">
-        <button class="mg-code-btn" onclick="submitPromoCode()">Активировать</button>
+        <input type="text" id="contactCityInput" class="mg-code-input" placeholder="Город">
+        <input type="tel" id="contactPhoneInput" class="mg-code-input" placeholder="Телефон">
+        <input type="email" id="contactEmailInput" class="mg-code-input" placeholder="Почта">
+        <button class="mg-code-btn" onclick="saveContact()">Сохранить</button>
       </div>
-      <p class="mg-sub" id="promoCodeMsg"></p>
+      <p class="mg-sub" id="contactMsg"></p>
     </div>
-  </div>
 
-  <div id="ptabRewards" style="display:none;">
     <div class="mg-section">
       <h2>Награды по уровням</h2>
       <p class="mg-sub">Нажми, когда откроется, чтобы забрать</p>
@@ -635,10 +630,30 @@ body{
         </div>
       </div>
     </div>
+  </div>
 
+  <div id="ptabSubscription" style="display:none;">
+    <div class="mg-section">
+      <h2>Подписка</h2>
+      <div class="mg-prize" id="subStatusCard">
+        <div class="mg-prize-lvl">🔒</div>
+        <div>
+          <div class="mg-prize-title" id="subStatusTitle">Нет активной подписки</div>
+          <div class="mg-prize-desc" id="subStatusDesc">Карта зон и награды по уровням закрыты</div>
+        </div>
+      </div>
+      <div class="mg-code-row">
+        <input type="text" id="promoCodeInput" class="mg-code-input" placeholder="Код с упаковки или с сайта">
+        <button class="mg-code-btn" onclick="submitPromoCode()" id="promoCodeBtn">Активировать</button>
+      </div>
+      <p class="mg-sub" id="promoCodeMsg"></p>
+    </div>
+  </div>
+
+  <div id="ptabRewards" style="display:none;">
     <div class="mg-section">
       <h2>Мои коды и покупки</h2>
-      <p class="mg-sub">Все коды из магазина сохраняются здесь — если пропустили уведомление, посмотрите тут</p>
+      <p class="mg-sub">Всё, что вы купили или получили в игре — если пропустили уведомление, посмотрите тут</p>
       <div id="myRewardsList"><p class="mg-sub">Загружаю…</p></div>
     </div>
   </div>
@@ -700,6 +715,7 @@ body{
     <div class="mg-signal-emoji" id="shopDetailIcon">🎁</div>
     <h3 id="shopDetailTitle">Название приза</h3>
     <p class="mg-sub" id="shopDetailDesc">Описание того, как активируется приз</p>
+    <p class="mg-shop-howto" id="shopDetailHowto"></p>
     <p class="mg-sub" id="shopDetailPrice" style="color:#FFC93C; font-family:'Unbounded', Arial, sans-serif; margin-bottom:14px;">🪙 0</p>
     <div id="shopDetailAction"></div>
     <button class="mg-signal-skip" onclick="closeShopDetail()">Закрыть</button>
@@ -743,7 +759,7 @@ function getLevelInfo(xp){
   };
 }
 
-var state = { xp: 0, coins: 0, hasSubscription: false, avatar: '🐉', avatarEffect: '', ownedAvatars: [], ownedEffects: [], claimedLevels: [] };
+var state = { xp: 0, coins: 0, hasSubscription: false, avatar: '🐉', avatarEffect: '', ownedAvatars: [], ownedEffects: [], claimedLevels: [], purchasedItemIds: [] };
 var completedThisSession = {}; // чтобы не отправить одно и то же задание дважды за сессию
 var userId = null;
 var userName = 'Игрок';
@@ -959,6 +975,13 @@ function renderProfile(data){
   var regEl = document.getElementById('profileRegDate');
   if(regEl) regEl.textContent = data.registrationDate ? formatDateHuman(data.registrationDate) : '—';
 
+  var cityInput = document.getElementById('contactCityInput');
+  var phoneInput = document.getElementById('contactPhoneInput');
+  var emailInput = document.getElementById('contactEmailInput');
+  if(cityInput && document.activeElement !== cityInput) cityInput.value = data.city || '';
+  if(phoneInput && document.activeElement !== phoneInput) phoneInput.value = data.phone || '';
+  if(emailInput && document.activeElement !== emailInput) emailInput.value = data.email || '';
+
   var avatarEl = document.getElementById('headerAvatar');
   if(avatarEl) avatarEl.textContent = data.avatar || '🐉';
   state.avatar = data.avatar || '🐉';
@@ -1013,11 +1036,50 @@ function renderSubscriptionStatus(hasSubscription, until){
   });
 }
 
+function saveContact(){
+  var cityInput = document.getElementById('contactCityInput');
+  var phoneInput = document.getElementById('contactPhoneInput');
+  var emailInput = document.getElementById('contactEmailInput');
+  var msg = document.getElementById('contactMsg');
+  var btn = document.querySelector('#ptabProfile .mg-code-btn');
+
+  var city = cityInput.value.trim();
+  var phone = phoneInput.value.trim();
+  var email = emailInput.value.trim();
+
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    msg.textContent = 'Проверьте адрес почты';
+    return;
+  }
+
+  if(btn) btn.disabled = true;
+  msg.textContent = 'Сохраняю…';
+
+  fetch(GAME_API, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'updateContact', userId: userId, city: city, phone: phone, email: email })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(btn) btn.disabled = false;
+    if(data.success){
+      msg.textContent = '✅ Сохранено';
+      document.getElementById('userCity').textContent = city || '—';
+    } else {
+      msg.textContent = 'Не удалось сохранить, попробуйте ещё раз';
+    }
+  })
+  .catch(function(){
+    if(btn) btn.disabled = false;
+    msg.textContent = 'Ошибка соединения';
+  });
+}
+
 // ---------- Активация кода (QR с браслета или купленного на сайте) ----------
 function submitPromoCode(){
   var input = document.getElementById('promoCodeInput');
   var msg = document.getElementById('promoCodeMsg');
-  var btn = document.querySelector('.mg-code-btn');
+  var btn = document.getElementById('promoCodeBtn');
   var code = input.value.trim();
   if(!code){ return; }
   msg.textContent = 'Проверяю…';
@@ -1071,9 +1133,10 @@ function renderCoinBalance(coins){
 }
 
 function loadShopItems(){
-  fetch(GAME_API + '?action=getShopItems&_t=' + Date.now(), { cache: 'no-store' })
+  fetch(GAME_API + '?action=getShopItems&userId=' + encodeURIComponent(userId) + '&_t=' + Date.now(), { cache: 'no-store' })
     .then(function(r){ return r.json(); })
     .then(function(data){
+      state.purchasedItemIds = data.purchasedItemIds || [];
       var freeList = document.getElementById('shopListFree');
       var subList = document.getElementById('shopListSub');
       var avatarFreeList = document.getElementById('avatarShopListFree');
@@ -1115,15 +1178,25 @@ function showShopSubtab(name){
 }
 
 var SHOP_TYPE_ICON = { code: '🎫', manual: '📦', instant: '⚡' };
+var SHOP_TYPE_HOWTO = {
+  code: 'Как получить: код придёт сразу после покупки — сохраните его или найдите позже в Профиль → Мои награды.',
+  manual: 'Как получить: заявка уйдёт автору бренда, с вами свяжутся для уточнения деталей.',
+  instant: 'Как получить: применяется сразу после покупки, ничего дополнительно делать не нужно.'
+};
+
+function isItemPurchased(item){
+  return !item.repeatable && state.purchasedItemIds.indexOf(item.id) !== -1;
+}
 
 function buildShopItemTile(item){
   var tile = document.createElement('div');
-  tile.className = 'mg-shop-tile';
+  var owned = isItemPurchased(item);
+  tile.className = 'mg-shop-tile' + (owned ? ' mg-owned' : '');
   var locked = item.requiresSubscription && !state.hasSubscription;
   tile.innerHTML =
     '<div class="mg-shop-tile-icon">' + (SHOP_TYPE_ICON[item.type] || '🎁') + '</div>' +
     '<div class="mg-shop-tile-name">' + escapeHtml(item.name) + '</div>' +
-    '<div class="mg-shop-tile-price">🪙 ' + item.price + (locked ? ' 🔒' : '') + '</div>';
+    '<div class="mg-shop-tile-price">' + (owned ? '✓ Куплено' : ('🪙 ' + item.price + (locked ? ' 🔒' : ''))) + '</div>';
   tile.onclick = function(){ openShopDetail(item); };
   return tile;
 }
@@ -1133,13 +1206,17 @@ function openShopDetail(item){
   document.getElementById('shopDetailIcon').textContent = SHOP_TYPE_ICON[item.type] || '🎁';
   document.getElementById('shopDetailTitle').textContent = item.name;
   document.getElementById('shopDetailDesc').textContent = item.description;
+  document.getElementById('shopDetailHowto').textContent = SHOP_TYPE_HOWTO[item.type] || '';
   document.getElementById('shopDetailPrice').textContent = '🪙 ' + item.price;
 
   var locked = item.requiresSubscription && !state.hasSubscription;
+  var owned = isItemPurchased(item);
   var canAfford = state.coins >= item.price;
   var actionArea = document.getElementById('shopDetailAction');
 
-  if(locked){
+  if(owned){
+    actionArea.innerHTML = '<div class="mg-shop-locked-badge">✓ Уже куплено</div>';
+  } else if(locked){
     actionArea.innerHTML = '<div class="mg-shop-locked-badge">🔒 Доступно только по подписке</div>';
   } else {
     actionArea.innerHTML = '<button class="mg-code-btn" ' + (canAfford ? '' : 'disabled') +
@@ -1159,9 +1236,7 @@ function buildShopItemCard(item){
 
   var locked = item.requiresSubscription && !state.hasSubscription;
   var canAfford = state.coins >= item.price;
-  var alreadyOwned =
-    (item.type === 'avatar' && item.value === state.avatar) ||
-    (item.type === 'avatareffect' && item.value === state.avatarEffect);
+  var alreadyOwned = isItemPurchased(item);
 
   var btnHtml;
   if(locked){
@@ -1176,11 +1251,16 @@ function buildShopItemCard(item){
     ? '<div class="mg-quest-icon" style="flex-shrink:0;">' + item.value + '</div>'
     : '';
 
+  var howto = item.type === 'avatar' ? 'Применяется сразу и остаётся в инвентаре — менять можно бесплатно кликом на аватар в шапке.'
+    : item.type === 'avatareffect' ? 'Применяется сразу и остаётся в инвентаре — менять можно бесплатно кликом на аватар в шапке.'
+    : '';
+
   card.innerHTML =
     previewHtml +
     '<div class="mg-shop-body">' +
       '<div class="mg-shop-name">' + escapeHtml(item.name) + '</div>' +
       '<div class="mg-shop-desc">' + escapeHtml(item.description) + '</div>' +
+      (howto ? '<div class="mg-shop-howto">' + howto + '</div>' : '') +
       '<div class="mg-shop-price">🪙 ' + item.price + '</div>' +
     '</div>' +
     btnHtml;
@@ -1228,6 +1308,7 @@ function buyShopItem(itemId, btn){
       btn.textContent = 'Купить';
       if(data.reason === 'not_enough_coins') showToast('Не хватает монеток');
       else if(data.reason === 'subscription_required') showToast('Нужна подписка');
+      else if(data.reason === 'already_purchased'){ showToast('Этот товар уже куплен'); loadShopItems(); }
       else if(data.reason === 'out_of_stock') showToast('Закончилось, загляните позже');
       else showToast('Не удалось купить, попробуйте ещё раз');
     }
