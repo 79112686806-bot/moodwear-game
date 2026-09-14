@@ -41,9 +41,15 @@ body{
   border:1px solid #2a2a2e;
   display:flex; align-items:center; justify-content:center;
   font-size:26px;
+  transition:box-shadow .3s ease, border-color .3s ease;
 }
 .mg-name{ font-family:'Unbounded', Arial, sans-serif; font-size:15px; font-weight:700; }
 .mg-city{ font-size:12px; color:#7a7a80; margin-top:3px; }
+.mg-reflink{
+  font-size:11px; color:#aab1f0; margin-top:5px; cursor:pointer;
+  display:inline-block; transition:color .2s ease;
+}
+.mg-reflink:active{ color:#39FF6A; }
 
 .mg-levelcard{
   background:#0d0d0d; border:1px solid #232326; border-radius:18px;
@@ -239,10 +245,9 @@ body{
 .mg-copy-btn.mg-copied{ background:#39FF6A; border-color:#39FF6A; color:#0d0d0d; }
 
 /* ---------- эффекты аватара ---------- */
-#profileAvatarWrap{ font-size:20px; transition:box-shadow .3s ease, border-color .3s ease; border:1.5px solid transparent; }
-#profileAvatarWrap.avatar-effect-gold{ box-shadow:0 0 16px rgba(255,201,60,0.8); border-color:#FFC93C; }
-#profileAvatarWrap.avatar-effect-neon{ box-shadow:0 0 16px rgba(170,177,240,0.8); border-color:#aab1f0; }
-#profileAvatarWrap.avatar-effect-fire{ box-shadow:0 0 16px rgba(255,92,92,0.8); border-color:#FF5C5C; }
+.avatar-effect-gold{ box-shadow:0 0 16px rgba(255,201,60,0.8); border-color:#FFC93C; }
+.avatar-effect-neon{ box-shadow:0 0 16px rgba(170,177,240,0.8); border-color:#aab1f0; }
+.avatar-effect-fire{ box-shadow:0 0 16px rgba(255,92,92,0.8); border-color:#FF5C5C; }
 .mg-prize-title{ font-size:13px; font-weight:700; margin-bottom:2px; }
 .mg-prize-desc{ font-size:11.5px; color:#7a7a80; }
 
@@ -434,12 +439,14 @@ body{
 <div class="mg-scroll">
 <div class="mg-header">
   <div class="mg-toprow">
-    <div class="mg-avatar">🐉</div>
+    <div class="mg-avatar" id="headerAvatarWrap" onclick="openAvatarPicker()" style="cursor:pointer;"><span id="headerAvatar">🐉</span></div>
     <div>
       <div class="mg-name mg-pulse-text" id="userName">Загрузка…</div>
       <div class="mg-city" id="userCity">—</div>
+      <div class="mg-reflink" id="headerRefLink" onclick="copyToClipboard(this.dataset.link, this)" style="display:none;">🔗 Скопировать ссылку</div>
     </div>
   </div>
+
   <div class="mg-levelcard" id="levelCard">
     <div class="mg-levelrow">
       <div class="mg-levelname">Уровень <span id="levelNum">1</span> · <span id="levelName">Первый шаг</span></div>
@@ -549,9 +556,9 @@ body{
   <div class="mg-section">
     <h2>Профиль</h2>
     <div class="mg-prize">
-      <div class="mg-prize-lvl" id="profileAvatarWrap" onclick="openAvatarPicker()" style="cursor:pointer;"><span id="profileAvatar">🐉</span></div>
+      <div class="mg-prize-lvl">📅</div>
       <div>
-        <div class="mg-prize-title" id="profileNameCity">Загрузка…</div>
+        <div class="mg-prize-title">В игре с</div>
         <div class="mg-prize-desc" id="profileRegDate">—</div>
       </div>
     </div>
@@ -562,17 +569,7 @@ body{
           <span>Твой код: <span id="profileRefCode">—</span></span>
           <button class="mg-copy-btn" onclick="copyToClipboard(document.getElementById('profileRefCode').textContent, this)">📋</button>
         </div>
-        <div class="mg-prize-desc">Делись ссылкой — за каждого нового игрока получишь монетки. Денег это не приносит, деньги дают только коды-призы из магазина.</div>
-      </div>
-    </div>
-    <div class="mg-prize" id="profileRefLinkRow" style="display:none;">
-      <div class="mg-prize-lvl">🔗</div>
-      <div style="flex:1; min-width:0;">
-        <div class="mg-prize-title" style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
-          <span>Твоя ссылка</span>
-          <button class="mg-copy-btn" onclick="copyToClipboard(document.getElementById('profileRefLink').textContent, this)">📋</button>
-        </div>
-        <div class="mg-prize-desc" id="profileRefLink" style="word-break:break-all;">—</div>
+        <div class="mg-prize-desc">Ссылку для друзей удобнее копировать сверху, рядом с аватаром. Приведи друга — получи монетки (не деньги, деньги дают только коды-призы из магазина).</div>
       </div>
     </div>
   </div>
@@ -859,7 +856,7 @@ function selectAvatar(value){
   .then(function(data){
     if(data.success){
       state.avatar = value;
-      document.getElementById('profileAvatar').textContent = value;
+      document.getElementById('headerAvatar').textContent = value;
       openAvatarPicker(); // перерисовать с новой активной кнопкой
     } else {
       showToast('Не удалось сменить аватар');
@@ -877,7 +874,7 @@ function selectEffect(value){
   .then(function(data){
     if(data.success){
       state.avatarEffect = value;
-      var wrap = document.getElementById('profileAvatarWrap');
+      var wrap = document.getElementById('headerAvatarWrap');
       wrap.classList.remove('avatar-effect-gold', 'avatar-effect-neon', 'avatar-effect-fire');
       if(value) wrap.classList.add('avatar-effect-' + value);
       openAvatarPicker(); // перерисовать с новой активной кнопкой
@@ -925,20 +922,17 @@ function fallbackCopy(text, onDone){
 }
 
 function renderProfile(data){
-  var nameCityEl = document.getElementById('profileNameCity');
-  if(nameCityEl) nameCityEl.textContent = userName + (data.city ? ' · ' + data.city : '');
-
   var regEl = document.getElementById('profileRegDate');
-  if(regEl) regEl.textContent = data.registrationDate ? ('В игре с ' + data.registrationDate) : '—';
+  if(regEl) regEl.textContent = data.registrationDate ? formatDateHuman(data.registrationDate) : '—';
 
-  var avatarEl = document.getElementById('profileAvatar');
+  var avatarEl = document.getElementById('headerAvatar');
   if(avatarEl) avatarEl.textContent = data.avatar || '🐉';
   state.avatar = data.avatar || '🐉';
   state.avatarEffect = data.avatarEffect || '';
   state.ownedAvatars = data.ownedAvatars || [];
   state.ownedEffects = data.ownedEffects || [];
 
-  var avatarWrap = document.getElementById('profileAvatarWrap');
+  var avatarWrap = document.getElementById('headerAvatarWrap');
   if(avatarWrap){
     avatarWrap.classList.remove('avatar-effect-gold', 'avatar-effect-neon', 'avatar-effect-fire');
     if(data.avatarEffect) avatarWrap.classList.add('avatar-effect-' + data.avatarEffect);
@@ -947,13 +941,22 @@ function renderProfile(data){
   var refCodeEl = document.getElementById('profileRefCode');
   if(refCodeEl && data.refCode) refCodeEl.textContent = data.refCode;
 
-  var refLinkRow = document.getElementById('profileRefLinkRow');
-  var refLinkEl = document.getElementById('profileRefLink');
-  if(refLinkRow && refLinkEl && data.refCode){
+  var headerLinkEl = document.getElementById('headerRefLink');
+  if(headerLinkEl && data.refCode){
     var link = VK_APP_URL + '?ref=' + data.refCode;
-    refLinkEl.textContent = link;
-    refLinkRow.style.display = '';
+    headerLinkEl.dataset.link = link;
+    headerLinkEl.style.display = '';
   }
+}
+
+var RU_MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+function formatDateHuman(isoDateStr){
+  // ожидает строку вида "2026-09-14"
+  var parts = String(isoDateStr).split('-');
+  if(parts.length !== 3) return isoDateStr;
+  var year = parts[0], month = parseInt(parts[1], 10) - 1, day = parseInt(parts[2], 10);
+  if(!RU_MONTHS[month]) return isoDateStr;
+  return day + ' ' + RU_MONTHS[month] + ' ' + year;
 }
 
 function renderSubscriptionStatus(hasSubscription, until){
@@ -1129,12 +1132,12 @@ function buyShopItem(itemId, btn){
       } else if(data.type === 'manual'){
         showToast('✅ Заявка принята, мы свяжемся с вами');
       } else if(data.type === 'avatar'){
-        var avatarEl = document.getElementById('profileAvatar');
+        var avatarEl = document.getElementById('headerAvatar');
         if(avatarEl) avatarEl.textContent = data.value;
         state.avatar = data.value;
         showToast('✅ Новый аватар применён!');
       } else if(data.type === 'avatareffect'){
-        var avatarWrap = document.getElementById('profileAvatarWrap');
+        var avatarWrap = document.getElementById('headerAvatarWrap');
         if(avatarWrap){
           avatarWrap.classList.remove('avatar-effect-gold', 'avatar-effect-neon', 'avatar-effect-fire');
           avatarWrap.classList.add('avatar-effect-' + data.value);
