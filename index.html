@@ -866,7 +866,7 @@ function loadUser(){
   var refCodeParam = params.get('ref') || '';
   var refParam = refCodeParam ? ('&ref=' + encodeURIComponent(refCodeParam)) : '';
 
-  fetch(GAME_API + '?action=getUser&userId=' + encodeURIComponent(userId) + refParam, { cache: 'no-store' })
+  fetch(GAME_API + '?action=getUser&userId=' + encodeURIComponent(userId) + refParam + '&_t=' + Date.now(), { cache: 'no-store' })
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(data.found){
@@ -1227,20 +1227,23 @@ var EFFECT_ICON = { gold: '✨', neon: '💜', fire: '🔥' };
 
 // Пункты «как получить приз» — по умолчанию и с заменой отдельных пунктов
 // под конкретный тип товара (коды на скидку / призы, которые отправляют почтой).
+var SHOP_HOWTO_MISSED = 'Если пропустили или забыли условия, приз всегда можно найти в Профиле → Мои награды.';
 var SHOP_HOWTO_BASE = [
   'Заполните в Профиле телефон и почту — без них не сможем отправить приз.',
   'Приз придёт на почту в течение суток после проверки.',
-  'Если пропустили уведомление, приз всегда можно найти в Профиле → Мои награды.'
+  SHOP_HOWTO_MISSED
 ];
 var SHOP_HOWTO_CODE = [
   SHOP_HOWTO_BASE[0],
   SHOP_HOWTO_BASE[1],
-  'Деньги за код переведём, когда друг купит браслет MOODWEAR на сайте, получит заказ и не оформит возврат — в течение суток после этого.'
+  'Деньги за код переведём, когда друг купит браслет MOODWEAR на сайте, получит заказ и не оформит возврат — в течение суток после этого.',
+  SHOP_HOWTO_MISSED
 ];
 var SHOP_HOWTO_MANUAL = [
   'Заполните в Профиле город, телефон и почту — без них не сможем отправить приз.',
   SHOP_HOWTO_BASE[1],
-  'С вами свяжутся по почте, чтобы уточнить детали доставки.'
+  'С вами свяжутся по почте, чтобы уточнить детали доставки.',
+  SHOP_HOWTO_MISSED
 ];
 var SHOP_HOWTO_AVATAR = [
   'Применяется сразу после покупки.',
@@ -1253,6 +1256,27 @@ function getShopHowtoList(item){
   if(item.type === 'avatar' || item.type === 'avatareffect') return SHOP_HOWTO_AVATAR;
   return SHOP_HOWTO_BASE;
 }
+
+// Пояснения для наград за уровень — тот же формат, что и для похожих призов
+// в магазине, но без пункта про «Мои награды»: сам список уже показывается там.
+var LEVEL_HOWTO = {
+  1: [
+    'Заполните в Профиле телефон и почту — без них не сможем отправить приз.',
+    'Скидка и стикерпак придут на почту в течение суток после проверки.'
+  ],
+  2: [
+    'Заполните в Профиле город, телефон и почту — без них не сможем отправить приз.',
+    'С вами свяжутся по почте, чтобы уточнить детали доставки.'
+  ],
+  3: [
+    'Заполните в Профиле телефон и почту — без них не сможем отправить приз.',
+    'Сертификат придёт на почту в течение суток после проверки.'
+  ],
+  4: [
+    'Заполните в Профиле город, телефон и почту — без них не сможем отправить приз.',
+    'С вами свяжутся по почте, чтобы договориться о времени и уточнить детали.'
+  ]
+};
 
 function isItemPurchased(item){
   return !item.repeatable && state.purchasedItemIds.indexOf(item.id) !== -1;
@@ -1334,6 +1358,7 @@ function buyShopItem(itemId, btn){
         var avatarEl = document.getElementById('headerAvatar');
         if(avatarEl) avatarEl.textContent = data.value;
         state.avatar = data.value;
+        if(state.ownedAvatars.indexOf(data.value) === -1) state.ownedAvatars.push(data.value);
         showToast('✅ Новый аватар применён!');
       } else if(data.type === 'avatareffect'){
         var avatarWrap = document.getElementById('headerAvatarWrap');
@@ -1342,6 +1367,7 @@ function buyShopItem(itemId, btn){
           avatarWrap.classList.add('avatar-effect-' + data.value);
         }
         state.avatarEffect = data.value;
+        if(state.ownedEffects.indexOf(data.value) === -1) state.ownedEffects.push(data.value);
         showToast('✅ Эффект применён!');
       } else {
         showToast('✅ Готово!');
@@ -1538,15 +1564,23 @@ function loadMyRewards(){
         var card = document.createElement('div');
         card.className = 'mg-prize';
         card.style.cursor = 'pointer';
-        var valueLine = r.value ? ('<div class="mg-prize-desc" style="color:#aab1f0;">' + escapeHtml(String(r.value)) + '</div>') : '';
+
+        var howtoList = r.type === 'level' ? (LEVEL_HOWTO[r.level] || []) : getShopHowtoList({ type: r.type });
+        var howtoHtml = howtoList.length
+          ? '<div class="mg-shop-howto"><ol>' + howtoList.map(function(line){ return '<li>' + escapeHtml(line) + '</li>'; }).join('') + '</ol></div>'
+          : '';
+        var valueLine = r.value ? ('<div class="mg-prize-desc" style="color:#aab1f0;">Код: ' + escapeHtml(String(r.value)) + '</div>') : '';
+        var descLine = r.description ? ('<div class="mg-prize-desc">' + escapeHtml(r.description) + '</div>') : '';
+
         card.innerHTML =
           '<div class="mg-prize-lvl">' + (REWARD_TYPE_ICON[r.type] || '🎁') + '</div>' +
           '<div style="flex:1; min-width:0;">' +
             '<div class="mg-prize-title">' + escapeHtml(r.title) + '</div>' +
-            '<div class="mg-prize-desc" style="opacity:.6;">' + escapeHtml(r.date || '') + ' · нажмите для подробностей</div>' +
+            '<div class="mg-prize-desc" style="opacity:.6;">' + (r.date ? formatDateHuman(r.date) : '') + ' · нажмите для подробностей</div>' +
             '<div class="mg-reward-details" style="display:none;">' +
-              '<div class="mg-prize-desc">' + escapeHtml(r.description || '') + '</div>' +
+              descLine +
               valueLine +
+              howtoHtml +
             '</div>' +
           '</div>';
         card.onclick = function(){
