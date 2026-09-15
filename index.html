@@ -647,7 +647,10 @@ body{
       </div>
 
       <p class="mg-sub">Подписка оформляется и оплачивается на сайте — как обычный товар. После оплаты код на активацию придёт на почту, вставьте его ниже.</p>
-      <button class="mg-code-btn" style="width:100%; margin-bottom:14px;" onclick="openSubscriptionPage()">Оформить и оплатить на сайте →</button>
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <button class="mg-code-btn" style="flex:1;" onclick="openSubscriptionPage('month')">Месяц — 149 ₽</button>
+        <button class="mg-code-btn" style="flex:1;" onclick="openSubscriptionPage('year')">Год — 990 ₽</button>
+      </div>
 
       <div class="mg-code-row">
         <input type="text" id="promoCodeInput" class="mg-code-input" placeholder="Код с упаковки или с сайта">
@@ -743,6 +746,19 @@ body{
     <p class="mg-sub" id="shopDetailPrice" style="color:#FFC93C; font-family:'Unbounded', Arial, sans-serif; margin-bottom:14px;">🪙 0</p>
     <div id="shopDetailAction"></div>
     <button class="mg-signal-skip" onclick="closeShopDetail()">Закрыть</button>
+  </div>
+</div>
+
+<div class="mg-signal-overlay" id="subPromoOverlay">
+  <div class="mg-signal-modal">
+    <div class="mg-signal-emoji">🔐</div>
+    <h3>Откройте всё в игре</h3>
+    <p class="mg-sub">С подпиской: карта зон, награды за уровень и эксклюзивные призы.</p>
+    <div style="display:flex; gap:8px; margin:6px 0 10px;">
+      <button class="mg-code-btn" style="flex:1;" onclick="goBuySubscriptionFromPromo('month')">Месяц — 149 ₽</button>
+      <button class="mg-code-btn" style="flex:1;" onclick="goBuySubscriptionFromPromo('year')">Год — 990 ₽</button>
+    </div>
+    <button class="mg-signal-skip" onclick="closeSubPromo()">Не сейчас</button>
   </div>
 </div>
 
@@ -1123,15 +1139,44 @@ function saveContact(){
 }
 
 // ---------- Активация кода (QR с браслета или купленного на сайте) ----------
-function openSubscriptionPage(){
+function openSubscriptionPage(plan){
+  var url = SUBSCRIPTION_PAGE_URL + (plan ? ('?plan=' + plan) : '');
   if(window.vkBridge){
-    vkBridge.send('VKWebAppOpenLink', { link: SUBSCRIPTION_PAGE_URL }).catch(function(){
-      window.open(SUBSCRIPTION_PAGE_URL, '_blank');
+    vkBridge.send('VKWebAppOpenLink', { link: url }).catch(function(){
+      window.open(url, '_blank');
     });
   } else {
-    window.open(SUBSCRIPTION_PAGE_URL, '_blank');
+    window.open(url, '_blank');
   }
 }
+
+// ---------- Напоминание о подписке (раз в час, только без подписки, закрывается) ----------
+var SUB_PROMO_INTERVAL_MS = 60 * 60 * 1000; // раз в час
+
+function maybeShowSubscriptionPromo(){
+  if(state.hasSubscription) return;
+  // не показываем поверх модалки выбора браслета дня — подождём, когда её закроют
+  if(document.getElementById('signalOverlay').classList.contains('show')) return;
+  var last = Number(localStorage.getItem('mwSubPromoLastShown') || 0);
+  if(Date.now() - last < SUB_PROMO_INTERVAL_MS) return;
+  localStorage.setItem('mwSubPromoLastShown', String(Date.now()));
+  document.getElementById('subPromoOverlay').classList.add('show');
+}
+
+function closeSubPromo(){
+  document.getElementById('subPromoOverlay').classList.remove('show');
+}
+
+function goBuySubscriptionFromPromo(plan){
+  closeSubPromo();
+  openSubscriptionPage(plan);
+}
+
+// Первая проверка — с небольшой задержкой после старта (не сразу поверх
+// модалки браслета дня), дальше перепроверяем раз в несколько минут —
+// чтобы окно само появилось снова примерно через час, если игра открыта долго.
+setTimeout(maybeShowSubscriptionPromo, 8000);
+setInterval(maybeShowSubscriptionPromo, 5 * 60 * 1000);
 
 function submitPromoCode(){
   var input = document.getElementById('promoCodeInput');
