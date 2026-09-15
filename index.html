@@ -797,9 +797,8 @@ function startWithDemoUser(){
   userName = 'Тестовый игрок';
   document.getElementById('userName').textContent = userName;
   document.getElementById('userName').classList.remove('mg-pulse-text');
-  loadUser();
+  loadInit();
   checkPromoInUrl();
-  checkAndShowSignalModal();
 }
 
 if (window.vkBridge) {
@@ -810,9 +809,8 @@ if (window.vkBridge) {
       userName = data.first_name || 'Игрок';
       document.getElementById('userName').textContent = userName;
       document.getElementById('userName').classList.remove('mg-pulse-text');
-      loadUser();
+      loadInit();
       checkPromoInUrl();
-      checkAndShowSignalModal();
     })
     .catch(function(err){
       console.error('VK Bridge недоступен, включаю тестовый режим:', err);
@@ -833,15 +831,6 @@ function getTodaySignal(){
   return localStorage.getItem('mwSignalValue') || '';
 }
 
-function checkAndShowSignalModal(){
-  var savedDate = localStorage.getItem('mwSignalDate');
-  if(savedDate === getTodayDateStr()){
-    loadQuests(); // сегодня уже спрашивали
-    return;
-  }
-  document.getElementById('signalOverlay').classList.add('show');
-}
-
 function chooseSignal(signal){
   localStorage.setItem('mwSignalDate', getTodayDateStr());
   localStorage.setItem('mwSignalValue', signal);
@@ -854,42 +843,52 @@ function chooseSignal(signal){
 function refreshAll(){
   var btn = document.getElementById('refreshBtn');
   if(btn) btn.classList.add('mg-spinning');
-  loadUser();   // сама вызывает renderXp(), renderSubscriptionStatus() и параллельно грузит магазин
-  loadQuests();
+  loadInit(); // один запрос — профиль, магазин и задания (если сигнал на сегодня уже выбран)
   setTimeout(function(){
     if(btn) btn.classList.remove('mg-spinning');
   }, 700);
 }
 
-function loadUser(){
+function loadInit(){
   var params = new URLSearchParams(window.location.search);
   var refCodeParam = params.get('ref') || '';
   var refParam = refCodeParam ? ('&ref=' + encodeURIComponent(refCodeParam)) : '';
+  var todaySignal = getTodaySignal(); // null, если сегодня ещё не выбирали браслет
+  var signalParam = todaySignal ? ('&signal=' + encodeURIComponent(todaySignal)) : '';
 
-  fetch(GAME_API + '?action=getUser&userId=' + encodeURIComponent(userId) + refParam + '&_t=' + Date.now(), { cache: 'no-store' })
+  fetch(GAME_API + '?action=getInit&userId=' + encodeURIComponent(userId) + refParam + signalParam + '&_t=' + Date.now(), { cache: 'no-store' })
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if(data.found){
-        state.xp = Number(data.xp) || 0;
-        state.hasSubscription = !!data.hasSubscription;
-        // уровень теперь считается на лету из XP, отдельно хранить не нужно
-        document.getElementById('userCity').textContent = data.city || '—';
-        renderSubscriptionStatus(data.hasSubscription, data.subscriptionUntil);
-        renderCoinBalance(Number(data.coins) || 0);
-        renderProfile(data);
+      var user = data.user || {};
+      if(user.found){
+        state.xp = Number(user.xp) || 0;
+        state.hasSubscription = !!user.hasSubscription;
+        document.getElementById('userCity').textContent = user.city || '—';
+        renderSubscriptionStatus(user.hasSubscription, user.subscriptionUntil);
+        renderCoinBalance(Number(user.coins) || 0);
+        renderProfile(user);
       } else {
         document.getElementById('userCity').textContent = 'Новый игрок';
       }
       renderXp();
-      renderShopItems(); // перерисовать уже загруженный список магазина с актуальными монетками/подпиской
+
+      state.shopItems = data.shopItems || [];
+      state.purchasedItemIds = data.purchasedItemIds || [];
+      renderShopItems();
+
+      // Сигнал на сегодня уже был известен на момент запроса — значит задания
+      // в ответе уже правильно подобраны под него, показываем сразу.
+      // Если нет — покажется модалка выбора браслета, а задания подгрузит chooseSignal().
+      if(todaySignal !== null){
+        renderQuestsList(data.quests || []);
+      } else {
+        document.getElementById('signalOverlay').classList.add('show');
+      }
     })
     .catch(function(err){
-      console.error('Ошибка загрузки профиля:', err);
+      console.error('Ошибка загрузки:', err);
       document.getElementById('userCity').textContent = 'Ошибка соединения';
     });
-  // Магазин не зависит от ответа getUser — грузим сразу же, параллельно,
-  // а не после того как придёт профиль. Раньше это удваивало время загрузки.
-  loadShopItems();
 }
 
 // ---------- Выбор аватара и эффекта (из уже купленного) ----------
@@ -1400,45 +1399,49 @@ function loadQuests(){
   fetch(GAME_API + '?action=getQuests&userId=' + encodeURIComponent(userId) + signalParam + '&_t=' + Date.now(), { cache: 'no-store' })
     .then(function(r){ return r.json(); })
     .then(function(data){
-      var list = document.getElementById('questsList');
-      list.innerHTML = '';
-      if(!data.quests || !data.quests.length){
-        list.innerHTML = '<p class="mg-sub">Заданий пока нет — загляните позже</p>';
-        return;
-      }
-      data.quests.forEach(function(q, i){
-        var color = q.type || 'lilac';
-        var emoji = TYPE_EMOJI[color] || '⭐';
-        var card = document.createElement('div');
-        card.className = 'mg-quest' + (q.done ? ' done mg-faded' : '');
-        card.dataset.color = color;
-        card.dataset.xp = q.xp;
-        card.dataset.coins = q.coins || 0;
-        card.dataset.questId = 'quest_' + i;
-        card.dataset.questText = q.text; // настоящий текст, для сверки с сервером
-        var statusSuffix = q.done ? ' · выполнено' : '';
-        var bonusBadge = q.bonus ? '<span class="mg-bonus-badge">✨ бонус за сигнал</span>' : '';
-        var btnHtml = q.done
-          ? '<div class="mg-quest-btn done-static">✓</div>'
-          : '<button class="mg-quest-btn" onclick="toggleQuest(this)">✓</button>';
-        var coinsSuffix = q.coins ? ' · 🪙 ' + q.coins : '';
-        card.innerHTML =
-          '<div class="mg-quest-icon">' + emoji + '</div>' +
-          '<div class="mg-quest-body">' +
-            bonusBadge +
-            '<div class="mg-quest-title">' + escapeHtml(q.text) + '</div>' +
-            '<div class="mg-quest-xp">+' + q.xp + ' XP' + coinsSuffix + statusSuffix + '</div>' +
-          '</div>' +
-          btnHtml;
-        if(q.bonus) card.classList.add('mg-bonus-card');
-        if(q.done) completedThisSession[card.dataset.questId] = true;
-        list.appendChild(card);
-      });
+      renderQuestsList(data.quests || []);
     })
     .catch(function(err){
       console.error('Ошибка загрузки заданий:', err);
       document.getElementById('questsList').innerHTML = '<p class="mg-sub">Не удалось загрузить задания</p>';
     });
+}
+
+function renderQuestsList(quests){
+  var list = document.getElementById('questsList');
+  list.innerHTML = '';
+  if(!quests || !quests.length){
+    list.innerHTML = '<p class="mg-sub">Заданий пока нет — загляните позже</p>';
+    return;
+  }
+  quests.forEach(function(q, i){
+    var color = q.type || 'lilac';
+    var emoji = TYPE_EMOJI[color] || '⭐';
+    var card = document.createElement('div');
+    card.className = 'mg-quest' + (q.done ? ' done mg-faded' : '');
+    card.dataset.color = color;
+    card.dataset.xp = q.xp;
+    card.dataset.coins = q.coins || 0;
+    card.dataset.questId = 'quest_' + i;
+    card.dataset.questText = q.text; // настоящий текст, для сверки с сервером
+    var statusSuffix = q.done ? ' · выполнено' : '';
+    var bonusBadge = q.bonus ? '<span class="mg-bonus-badge">✨ бонус за сигнал</span>' : '';
+    var btnHtml = q.done
+      ? '<div class="mg-quest-btn done-static">✓</div>'
+      : '<button class="mg-quest-btn" onclick="toggleQuest(this)">✓</button>';
+    var coinsSuffix = q.coins ? ' · 🪙 ' + q.coins : '';
+    card.innerHTML =
+      '<div class="mg-quest-icon">' + emoji + '</div>' +
+      '<div class="mg-quest-body">' +
+        bonusBadge +
+        '<div class="mg-quest-title">' + escapeHtml(q.text) + '</div>' +
+        '<div class="mg-quest-xp">+' + q.xp + ' XP' + coinsSuffix + statusSuffix + '</div>' +
+      '</div>' +
+      btnHtml;
+    if(q.bonus) card.classList.add('mg-bonus-card');
+    if(q.done) completedThisSession[card.dataset.questId] = true;
+    list.appendChild(card);
+  });
 }
 
 function escapeHtml(str){
@@ -1548,7 +1551,7 @@ function showProfileSubtab(name){
 }
 
 // ---------- Мои награды (история) ----------
-var REWARD_TYPE_ICON = { code: '🎫', manual: '📦', level: '🏆' };
+var REWARD_TYPE_ICON = { code: '🧾', manual: '📬', level: '🏆' };
 function loadMyRewards(){
   var list = document.getElementById('myRewardsList');
   if(!list) return;
@@ -1566,6 +1569,10 @@ function loadMyRewards(){
         card.style.cursor = 'pointer';
 
         var howtoList = r.type === 'level' ? (LEVEL_HOWTO[r.level] || []) : getShopHowtoList({ type: r.type });
+        // В истории «Мои награды» пункт про «загляните в Мои награды» не нужен — вы уже здесь.
+        if(howtoList.length && howtoList[howtoList.length - 1] === SHOP_HOWTO_MISSED){
+          howtoList = howtoList.slice(0, -1);
+        }
         var howtoHtml = howtoList.length
           ? '<div class="mg-shop-howto"><ol>' + howtoList.map(function(line){ return '<li>' + escapeHtml(line) + '</li>'; }).join('') + '</ol></div>'
           : '';
@@ -1682,7 +1689,7 @@ function showToast(text){
   window._mgToastTimer = setTimeout(function(){ t.classList.remove('show'); }, 1600);
 }
 
-// loadUser() и loadQuests() теперь запускаются автоматически выше,
+// loadInit() теперь запускается автоматически выше,
 // сразу после того как VK Bridge (или тестовый режим) определит игрока.
 </script>
 
