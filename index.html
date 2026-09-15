@@ -647,9 +647,12 @@ body{
       </div>
 
       <p class="mg-sub">Подписка оформляется и оплачивается на сайте — как обычный товар. После оплаты код на активацию придёт на почту, вставьте его ниже.</p>
+      <button class="mg-code-btn" style="width:100%; margin-bottom:14px;" onclick="openSubscriptionPage()">Оформить подписку на сайте →</button>
+
+      <p class="mg-sub" style="margin-top:0;">Или сразу к оплате, без страницы с описанием:</p>
       <div style="display:flex; gap:8px; margin-bottom:14px;">
-        <button class="mg-code-btn" style="flex:1;" onclick="openSubscriptionPage('month')">Месяц — 149 ₽</button>
-        <button class="mg-code-btn" style="flex:1;" onclick="openSubscriptionPage('year')">Год — 990 ₽</button>
+        <button class="mg-code-btn" style="flex:1;" onclick="mwDirectBuy('month')">Купить месяц — 149 ₽</button>
+        <button class="mg-code-btn" style="flex:1;" onclick="mwDirectBuy('year')">Купить год — 990 ₽</button>
       </div>
 
       <div class="mg-code-row">
@@ -1139,14 +1142,36 @@ function saveContact(){
 }
 
 // ---------- Активация кода (QR с браслета или купленного на сайте) ----------
-function openSubscriptionPage(plan){
-  var url = SUBSCRIPTION_PAGE_URL + (plan ? ('?plan=' + plan) : '');
+function openSubscriptionPage(){
+  var url = SUBSCRIPTION_PAGE_URL;
   if(window.vkBridge){
     vkBridge.send('VKWebAppOpenLink', { link: url }).catch(function(){
       window.open(url, '_blank');
     });
   } else {
     window.open(url, '_blank');
+  }
+}
+
+// Прямая покупка — минуя страницу с описанием, сразу в корзину конкретного
+// товара на сайте. #order — служебный якорь Тильды, сам открывает попап покупки.
+// ЗАМЕНИТЕ на настоящие ссылки на ваши товары (те же, что в файле /podpiska/) —
+// откройте товар на сайте и скопируйте адрес из строки браузера целиком.
+var MW_DIRECT_PRODUCTS = {
+  month: 'ЗАМЕНИТЕ_НА_ССЫЛКУ_ТОВАРА_МЕСЯЦ',
+  year:  'ЗАМЕНИТЕ_НА_ССЫЛКУ_ТОВАРА_ГОД'
+};
+
+function mwDirectBuy(plan){
+  var url = MW_DIRECT_PRODUCTS[plan];
+  if(!url) return;
+  var target = url.replace(/#.*$/, '') + '#order';
+  if(window.vkBridge){
+    vkBridge.send('VKWebAppOpenLink', { link: target }).catch(function(){
+      window.open(target, '_blank');
+    });
+  } else {
+    window.open(target, '_blank');
   }
 }
 
@@ -1169,7 +1194,7 @@ function closeSubPromo(){
 
 function goBuySubscriptionFromPromo(plan){
   closeSubPromo();
-  openSubscriptionPage(plan);
+  mwDirectBuy(plan);
 }
 
 // Первая проверка — с небольшой задержкой после старта (не сразу поверх
