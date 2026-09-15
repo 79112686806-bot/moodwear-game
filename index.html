@@ -645,6 +645,10 @@ body{
           <div class="mg-prize-desc" id="subStatusDesc">Карта зон и награды по уровням закрыты</div>
         </div>
       </div>
+
+      <p class="mg-sub">Подписка оформляется и оплачивается на сайте — как обычный товар. После оплаты код на активацию придёт на почту, вставьте его ниже.</p>
+      <button class="mg-code-btn" style="width:100%; margin-bottom:14px;" onclick="openSubscriptionPage()">Оформить и оплатить на сайте →</button>
+
       <div class="mg-code-row">
         <input type="text" id="promoCodeInput" class="mg-code-input" placeholder="Код с упаковки или с сайта">
         <button class="mg-code-btn" onclick="submitPromoCode()" id="promoCodeBtn">Активировать</button>
@@ -748,6 +752,8 @@ body{
 // АДРЕС ВАШЕГО БЭКЕНДА (Google Apps Script Web App)
 // ==========================================================
 var GAME_API = 'https://script.google.com/macros/s/AKfycbwCOtcPOjO4R0p2EHsGH5kdE7p3RohQ5zx6BaV8IhAsyqk5ZmBd9v_2o-tMUwxapvIP/exec';
+// ЗАМЕНИТЕ на реальную ссылку на товар/страницу подписки на getmoodwear.ru
+var SUBSCRIPTION_PAGE_URL = 'https://getmoodwear.ru/podpiska';
 var VK_APP_URL = 'https://vk.ru/app54768835'; // адрес самого VK-приложения — для реферальных ссылок
 
 // Иконки/эмодзи по типу задания (совпадает с колонкой "тип" в листе Quests)
@@ -1117,6 +1123,16 @@ function saveContact(){
 }
 
 // ---------- Активация кода (QR с браслета или купленного на сайте) ----------
+function openSubscriptionPage(){
+  if(window.vkBridge){
+    vkBridge.send('VKWebAppOpenLink', { link: SUBSCRIPTION_PAGE_URL }).catch(function(){
+      window.open(SUBSCRIPTION_PAGE_URL, '_blank');
+    });
+  } else {
+    window.open(SUBSCRIPTION_PAGE_URL, '_blank');
+  }
+}
+
 function submitPromoCode(){
   var input = document.getElementById('promoCodeInput');
   var msg = document.getElementById('promoCodeMsg');
