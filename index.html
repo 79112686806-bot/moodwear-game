@@ -649,12 +649,6 @@ body{
       <p class="mg-sub">Подписка оформляется и оплачивается на сайте — как обычный товар. После оплаты код на активацию придёт на почту, вставьте его ниже.</p>
       <button class="mg-code-btn" style="width:100%; margin-bottom:14px;" onclick="openSubscriptionPage()">Оформить подписку на сайте →</button>
 
-      <p class="mg-sub" style="margin-top:0;">Или сразу к оплате, без страницы с описанием:</p>
-      <div style="display:flex; gap:8px; margin-bottom:14px;">
-        <button class="mg-code-btn" style="flex:1;" onclick="mwDirectBuy('month')">Купить месяц — 149 ₽</button>
-        <button class="mg-code-btn" style="flex:1;" onclick="mwDirectBuy('year')">Купить год — 990 ₽</button>
-      </div>
-
       <div class="mg-code-row">
         <input type="text" id="promoCodeInput" class="mg-code-input" placeholder="Код с упаковки или с сайта">
         <button class="mg-code-btn" onclick="submitPromoCode()" id="promoCodeBtn">Активировать</button>
@@ -769,7 +763,7 @@ body{
 // ==========================================================
 var GAME_API = 'https://script.google.com/macros/s/AKfycbwCOtcPOjO4R0p2EHsGH5kdE7p3RohQ5zx6BaV8IhAsyqk5ZmBd9v_2o-tMUwxapvIP/exec';
 // ЗАМЕНИТЕ на реальную ссылку на товар/страницу подписки на getmoodwear.ru
-var SUBSCRIPTION_PAGE_URL = 'https://getmoodwear.ru/podpiska';
+var SUBSCRIPTION_PAGE_URL = 'https://getmoodwear.ru/podpiska/';
 var VK_APP_URL = 'https://vk.ru/app54768835'; // адрес самого VK-приложения — для реферальных ссылок
 
 // Иконки/эмодзи по типу задания (совпадает с колонкой "тип" в листе Quests)
@@ -1143,23 +1137,6 @@ function saveContact(){
 // ---------- Активация кода (QR с браслета или купленного на сайте) ----------
 function openSubscriptionPage(){
   window.open(SUBSCRIPTION_PAGE_URL, '_blank');
-}
-
-// Прямая покупка — минуя страницу с описанием, сразу в корзину конкретного
-// товара на сайте. #order — служебный якорь Тильды, сам открывает попап покупки.
-var MW_DIRECT_PRODUCTS = {
-  month: 'https://getmoodwear.ru/tproduct/398811051973-1-mesyats',
-  year:  'https://getmoodwear.ru/tproduct/249683857943-1-god'
-};
-
-function mwDirectBuy(plan){
-  var url = MW_DIRECT_PRODUCTS[plan];
-  if(!url || url.indexOf('ЗАМЕНИТЕ') === 0){
-    showToast('Ссылка на товар ещё не настроена');
-    return;
-  }
-  var target = url.replace(/#.*$/, '') + '#order';
-  window.open(target, '_blank');
 }
 
 // ---------- Напоминание о подписке (раз в час, только без подписки, закрывается) ----------
