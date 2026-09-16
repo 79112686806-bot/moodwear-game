@@ -757,10 +757,7 @@ body{
     <div class="mg-signal-emoji">🔐</div>
     <h3>Откройте всё в игре</h3>
     <p class="mg-sub">С подпиской: карта зон, награды за уровень и эксклюзивные призы.</p>
-    <div style="display:flex; gap:8px; margin:6px 0 10px;">
-      <button class="mg-code-btn" style="flex:1;" onclick="goBuySubscriptionFromPromo('month')">Месяц — 149 ₽</button>
-      <button class="mg-code-btn" style="flex:1;" onclick="goBuySubscriptionFromPromo('year')">Год — 990 ₽</button>
-    </div>
+    <button class="mg-code-btn" style="width:100%; margin:6px 0 10px;" onclick="goBuySubscriptionFromPromo()">Оформить подписку →</button>
     <button class="mg-signal-skip" onclick="closeSubPromo()">Не сейчас</button>
   </div>
 </div>
@@ -808,6 +805,7 @@ var state = { xp: 0, coins: 0, hasSubscription: false, avatar: '🐉', avatarEff
 var completedThisSession = {}; // чтобы не отправить одно и то же задание дважды за сессию
 var userId = null;
 var userName = 'Игрок';
+var mwInsideVK = false; // true только если реально запущены внутри VK — используется, чтобы не пытаться звать vkBridge впустую там, где его некому слушать
 
 // ---------- Получение пользователя через VK Bridge ----------
 // Если открыто внутри VK — берём настоящий ID через VK Bridge.
@@ -830,6 +828,7 @@ if (window.vkBridge) {
   vkBridge.send('VKWebAppInit')
     .then(function(){ return vkBridge.send('VKWebAppGetUserInfo'); })
     .then(function(data){
+      mwInsideVK = true;
       userId = String(data.id);
       userName = data.first_name || 'Игрок';
       document.getElementById('userName').textContent = userName;
@@ -1144,10 +1143,8 @@ function saveContact(){
 // ---------- Активация кода (QR с браслета или купленного на сайте) ----------
 function openSubscriptionPage(){
   var url = SUBSCRIPTION_PAGE_URL;
-  if(window.vkBridge){
-    vkBridge.send('VKWebAppOpenLink', { link: url }).catch(function(){
-      window.open(url, '_blank');
-    });
+  if(mwInsideVK){
+    vkBridge.send('VKWebAppOpenLink', { link: url }).catch(function(){ window.open(url, '_blank'); });
   } else {
     window.open(url, '_blank');
   }
@@ -1158,18 +1155,19 @@ function openSubscriptionPage(){
 // ЗАМЕНИТЕ на настоящие ссылки на ваши товары (те же, что в файле /podpiska/) —
 // откройте товар на сайте и скопируйте адрес из строки браузера целиком.
 var MW_DIRECT_PRODUCTS = {
-  month: 'ЗАМЕНИТЕ_НА_ССЫЛКУ_ТОВАРА_МЕСЯЦ',
-  year:  'ЗАМЕНИТЕ_НА_ССЫЛКУ_ТОВАРА_ГОД'
+  month: 'https://getmoodwear.ru/tproduct/398811051973-1-mesyats',
+  year:  'https://getmoodwear.ru/tproduct/249683857943-1-god'
 };
 
 function mwDirectBuy(plan){
   var url = MW_DIRECT_PRODUCTS[plan];
-  if(!url) return;
+  if(!url || url.indexOf('ЗАМЕНИТЕ') === 0){
+    showToast('Ссылка на товар ещё не настроена');
+    return;
+  }
   var target = url.replace(/#.*$/, '') + '#order';
-  if(window.vkBridge){
-    vkBridge.send('VKWebAppOpenLink', { link: target }).catch(function(){
-      window.open(target, '_blank');
-    });
+  if(mwInsideVK){
+    vkBridge.send('VKWebAppOpenLink', { link: target }).catch(function(){ window.open(target, '_blank'); });
   } else {
     window.open(target, '_blank');
   }
@@ -1192,9 +1190,9 @@ function closeSubPromo(){
   document.getElementById('subPromoOverlay').classList.remove('show');
 }
 
-function goBuySubscriptionFromPromo(plan){
+function goBuySubscriptionFromPromo(){
   closeSubPromo();
-  mwDirectBuy(plan);
+  openSubscriptionPage();
 }
 
 // Первая проверка — с небольшой задержкой после старта (не сразу поверх
