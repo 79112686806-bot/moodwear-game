@@ -646,8 +646,10 @@ body{
         </div>
       </div>
 
-      <p class="mg-sub">Подписка оформляется и оплачивается на сайте — как обычный товар. После оплаты код на активацию придёт на почту, вставьте его ниже.</p>
-      <button class="mg-code-btn" style="width:100%; margin-bottom:14px;" onclick="openSubscriptionPage()">Оформить подписку на сайте →</button>
+      <div id="subOfferBlock">
+        <p class="mg-sub">Подписка оформляется и оплачивается на сайте — как обычный товар. После оплаты код на активацию придёт на почту, вставьте его ниже.</p>
+        <button class="mg-code-btn" style="width:100%; margin-bottom:14px;" onclick="openSubscriptionPage()">Оформить подписку на сайте →</button>
+      </div>
 
       <div class="mg-code-row">
         <input type="text" id="promoCodeInput" class="mg-code-input" placeholder="Код с упаковки или с сайта">
@@ -1059,7 +1061,9 @@ function renderSubscriptionStatus(hasSubscription, until){
   var card = document.getElementById('subStatusCard');
   var title = document.getElementById('subStatusTitle');
   var desc = document.getElementById('subStatusDesc');
+  var offerBlock = document.getElementById('subOfferBlock');
   if(!card) return;
+  if(offerBlock) offerBlock.style.display = hasSubscription ? 'none' : '';
   if(hasSubscription){
     card.querySelector('.mg-prize-lvl').textContent = '✅';
     title.textContent = 'Подписка активна';
