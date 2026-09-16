@@ -1142,18 +1142,11 @@ function saveContact(){
 
 // ---------- Активация кода (QR с браслета или купленного на сайте) ----------
 function openSubscriptionPage(){
-  var url = SUBSCRIPTION_PAGE_URL;
-  if(mwInsideVK){
-    vkBridge.send('VKWebAppOpenLink', { link: url }).catch(function(){ window.open(url, '_blank'); });
-  } else {
-    window.open(url, '_blank');
-  }
+  window.open(SUBSCRIPTION_PAGE_URL, '_blank');
 }
 
 // Прямая покупка — минуя страницу с описанием, сразу в корзину конкретного
 // товара на сайте. #order — служебный якорь Тильды, сам открывает попап покупки.
-// ЗАМЕНИТЕ на настоящие ссылки на ваши товары (те же, что в файле /podpiska/) —
-// откройте товар на сайте и скопируйте адрес из строки браузера целиком.
 var MW_DIRECT_PRODUCTS = {
   month: 'https://getmoodwear.ru/tproduct/398811051973-1-mesyats',
   year:  'https://getmoodwear.ru/tproduct/249683857943-1-god'
@@ -1166,11 +1159,7 @@ function mwDirectBuy(plan){
     return;
   }
   var target = url.replace(/#.*$/, '') + '#order';
-  if(mwInsideVK){
-    vkBridge.send('VKWebAppOpenLink', { link: target }).catch(function(){ window.open(target, '_blank'); });
-  } else {
-    window.open(target, '_blank');
-  }
+  window.open(target, '_blank');
 }
 
 // ---------- Напоминание о подписке (раз в час, только без подписки, закрывается) ----------
