@@ -1061,9 +1061,7 @@ function renderSubscriptionStatus(hasSubscription, until){
   var card = document.getElementById('subStatusCard');
   var title = document.getElementById('subStatusTitle');
   var desc = document.getElementById('subStatusDesc');
-  var offerBlock = document.getElementById('subOfferBlock');
   if(!card) return;
-  if(offerBlock) offerBlock.style.display = hasSubscription ? 'none' : '';
   if(hasSubscription){
     card.querySelector('.mg-prize-lvl').textContent = '✅';
     title.textContent = 'Подписка активна';
