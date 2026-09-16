@@ -521,15 +521,15 @@ body{
   </div>
 </div>
 
-<!-- ===== СТРАНИЦА: КАРТА (заглушка) ===== -->
+<!-- ===== СТРАНИЦА: КАРТА ===== -->
 <div class="mg-page" id="page-map">
   <div class="mg-lock-wrap locked" id="mapLockWrap">
     <div class="mg-lock-content">
-      <div class="mg-section" style="text-align:center; padding-top:60px;">
-        <div style="font-size:40px; margin-bottom:14px;">🗺️</div>
-        <h2>Карта зон скоро здесь</h2>
-        <p class="mg-sub">Мы собираем данные о самых оживлённых местах города — появится в одном из следующих обновлений</p>
+      <div class="mg-section" style="padding-bottom:10px;">
+        <h2>Карта зон</h2>
+        <p class="mg-sub" id="mapStatusText">Открываю карту…</p>
       </div>
+      <div id="mapContainer" style="width:100%; height:420px; border-radius:16px; overflow:hidden; background:#0d0d0d; margin-bottom:16px;"></div>
     </div>
     <div class="mg-lock-overlay">
       <div class="mg-lock-icon">🔒</div>
@@ -764,8 +764,113 @@ body{
 // АДРЕС ВАШЕГО БЭКЕНДА (Google Apps Script Web App)
 // ==========================================================
 var GAME_API = 'https://script.google.com/macros/s/AKfycbwCOtcPOjO4R0p2EHsGH5kdE7p3RohQ5zx6BaV8IhAsyqk5ZmBd9v_2o-tMUwxapvIP/exec';
-// ЗАМЕНИТЕ на реальную ссылку на товар/страницу подписки на getmoodwear.ru
+// Страница подписки на сайте
 var SUBSCRIPTION_PAGE_URL = 'https://getmoodwear.ru/podpiska/';
+// Ключ Yandex Maps JS API — Кабинет разработчика → Ключи → JavaScript API
+var YANDEX_MAPS_API_KEY = '7598d0f0-93c0-451a-bff8-e8fbe698ee64';
+var SPB_CENTER = [59.9311, 30.3609]; // центр Санкт-Петербурга, стартовая точка карты
+
+// ---------- Геолокация ----------
+function getUserLocation(){
+  return new Promise(function(resolve){
+    if(state.userLat && state.userLng){
+      resolve({ lat: state.userLat, lng: state.userLng });
+      return;
+    }
+    if(mwInsideVK && window.vkBridge){
+      vkBridge.send('VKWebAppGetGeodata').then(function(data){
+        if(!data || data.available === false || !data.lat){ resolve(null); return; }
+        state.userLat = data.lat;
+        state.userLng = data.long;
+        resolve({ lat: data.lat, lng: data.long });
+      }).catch(function(){ resolve(null); });
+    } else if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(function(pos){
+        state.userLat = pos.coords.latitude;
+        state.userLng = pos.coords.longitude;
+        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      }, function(){ resolve(null); }, { timeout: 8000, enableHighAccuracy: true });
+    } else {
+      resolve(null);
+    }
+  });
+}
+
+// ---------- Карта зон ----------
+var mwMapInstance = null;
+var mwMapLoading = false;
+
+function loadYandexMapsScript(callback){
+  if(window.ymaps){ callback(); return; }
+  if(mwMapLoading){
+    setTimeout(function(){ loadYandexMapsScript(callback); }, 300);
+    return;
+  }
+  mwMapLoading = true;
+  var script = document.createElement('script');
+  script.src = 'https://api-maps.yandex.ru/2.1/?apikey=' + YANDEX_MAPS_API_KEY + '&lang=ru_RU';
+  script.onload = function(){ window.ymaps.ready(callback); };
+  script.onerror = function(){
+    document.getElementById('mapStatusText').textContent = 'Не удалось загрузить карту — проверьте соединение';
+  };
+  document.head.appendChild(script);
+}
+
+function initZonesMap(){
+  if(mwMapInstance) return; // карта уже открывалась в этой сессии — не грузим повторно, экономим лимит запросов
+  var statusEl = document.getElementById('mapStatusText');
+  loadYandexMapsScript(function(){
+    mwMapInstance = new ymaps.Map('mapContainer', {
+      center: SPB_CENTER,
+      zoom: 12,
+      controls: ['zoomControl', 'geolocationControl']
+    });
+
+    fetch(GAME_API + '?action=getZones&_t=' + Date.now(), { cache: 'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var zones = data.zones || [];
+        if(!zones.length){
+          statusEl.textContent = 'Зоны пока не добавлены — загляните позже';
+          return;
+        }
+        statusEl.textContent = 'Задания рядом — подойдите ближе, чтобы выполнить';
+        zones.forEach(function(z){
+          var placemark = new ymaps.Placemark([z.lat, z.lng], {
+            balloonContentHeader: escapeHtml(z.name),
+            balloonContentBody: escapeHtml(z.description || '')
+          }, {
+            preset: 'islands#violetDotIconWithCaption',
+            iconCaption: z.name
+          });
+          mwMapInstance.geoObjects.add(placemark);
+
+          var circle = new ymaps.Circle([[z.lat, z.lng], z.radius], {}, {
+            fillColor: '#aab1f033',
+            strokeColor: '#aab1f0',
+            strokeWidth: 1
+          });
+          mwMapInstance.geoObjects.add(circle);
+        });
+      })
+      .catch(function(){
+        statusEl.textContent = 'Не удалось загрузить зоны';
+      });
+
+    getUserLocation().then(function(loc){
+      if(!loc){
+        statusEl.textContent = 'Не удалось определить ваше местоположение — разрешите доступ к геолокации';
+        return;
+      }
+      var me = new ymaps.Placemark([loc.lat, loc.lng], { balloonContent: 'Вы здесь' }, {
+        preset: 'islands#blueCircleIcon'
+      });
+      mwMapInstance.geoObjects.add(me);
+      mwMapInstance.setCenter([loc.lat, loc.lng], 14);
+    });
+  });
+}
+
 var VK_APP_URL = 'https://vk.ru/app54768835'; // адрес самого VK-приложения — для реферальных ссылок
 
 // Иконки/эмодзи по типу задания (совпадает с колонкой "тип" в листе Quests)
@@ -797,7 +902,7 @@ function getLevelInfo(xp){
   };
 }
 
-var state = { xp: 0, coins: 0, hasSubscription: false, avatar: '🐉', avatarEffect: '', ownedAvatars: [], ownedEffects: [], claimedLevels: [], purchasedItemIds: [], shopItems: [] };
+var state = { xp: 0, coins: 0, hasSubscription: false, avatar: '🐉', avatarEffect: '', ownedAvatars: [], ownedEffects: [], claimedLevels: [], purchasedItemIds: [], shopItems: [], userLat: null, userLng: null };
 var completedThisSession = {}; // чтобы не отправить одно и то же задание дважды за сессию
 var userId = null;
 var userName = 'Игрок';
@@ -1476,8 +1581,10 @@ function renderQuestsList(quests){
     card.dataset.coins = q.coins || 0;
     card.dataset.questId = 'quest_' + i;
     card.dataset.questText = q.text; // настоящий текст, для сверки с сервером
+    card.dataset.zoneId = q.zoneId || '';
     var statusSuffix = q.done ? ' · выполнено' : '';
     var bonusBadge = q.bonus ? '<span class="mg-bonus-badge">✨ бонус за сигнал</span>' : '';
+    var zoneBadge = q.zoneId ? '<span class="mg-bonus-badge" style="background:none; border:1px solid #aab1f0; color:#aab1f0;">📍 нужно быть в зоне</span>' : '';
     var btnHtml = q.done
       ? '<div class="mg-quest-btn done-static">✓</div>'
       : '<button class="mg-quest-btn" onclick="toggleQuest(this)">✓</button>';
@@ -1485,7 +1592,7 @@ function renderQuestsList(quests){
     card.innerHTML =
       '<div class="mg-quest-icon">' + emoji + '</div>' +
       '<div class="mg-quest-body">' +
-        bonusBadge +
+        bonusBadge + zoneBadge +
         '<div class="mg-quest-title">' + escapeHtml(q.text) + '</div>' +
         '<div class="mg-quest-xp">+' + q.xp + ' XP' + coinsSuffix + statusSuffix + '</div>' +
       '</div>' +
@@ -1659,27 +1766,18 @@ function showPage(name, btn){
   document.getElementById('page-' + name).classList.add('active');
   document.querySelectorAll('.mg-nav-item').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
+  if(name === 'map') initZonesMap();
 }
 
 // ---------- Выполнение задания ----------
-function toggleQuest(btn){
-  var card = btn.closest('.mg-quest');
-  var qid = card.dataset.questId;
-  var questText = card.dataset.questText;
-  if(card.classList.contains('done') || completedThisSession[qid]) return;
-
-  var xp = parseInt(card.dataset.xp, 10) || 0;
-  var coins = parseInt(card.dataset.coins, 10) || 0;
+function applyQuestDoneUI(card, btn, xp, coins){
   var oldLevel = getLevelInfo(state.xp).levelNum;
-  completedThisSession[qid] = true;
   card.classList.add('done');
   var coinsSuffix = coins ? ' · 🪙 ' + coins : '';
   card.querySelector('.mg-quest-xp').textContent = '+' + xp + ' XP' + coinsSuffix + ' · выполнено';
   btn.classList.add('mg-glow-burst');
   setTimeout(function(){ btn.classList.remove('mg-glow-burst'); }, 650);
   setTimeout(function(){ card.classList.add('mg-faded'); }, 700);
-
-  // Оптимистично обновляем экран сразу, не дожидаясь ответа сервера
   state.xp += xp;
   state.coins += coins;
   renderXp();
@@ -1693,44 +1791,71 @@ function toggleQuest(btn){
   } else {
     showToast('+' + xp + ' XP' + (coins ? ' · +' + coins + ' 🪙' : ''));
   }
+}
 
-  // Отправляем реальное начисление в таблицу — сервер сам проверит,
-  // не выполнено ли уже это задание сегодня, и откажет, если да.
-  fetch(GAME_API, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'addXp',
-      userId: userId,
-      xp: xp,
-      coins: coins,
-      name: userName,
-      city: '',
-      questText: questText
+function revertQuestDoneUI(card, xp, coins){
+  card.classList.remove('done', 'mg-faded');
+  state.xp -= xp;
+  state.coins -= coins;
+  renderXp();
+  renderCoinBalance(state.coins);
+}
+
+function toggleQuest(btn){
+  var card = btn.closest('.mg-quest');
+  var qid = card.dataset.questId;
+  var questText = card.dataset.questText;
+  if(card.classList.contains('done') || completedThisSession[qid]) return;
+
+  var xp = parseInt(card.dataset.xp, 10) || 0;
+  var coins = parseInt(card.dataset.coins, 10) || 0;
+  var zoneId = card.dataset.zoneId || '';
+
+  // Задания без зоны — как раньше, зачисляем сразу, сервер подтверждает фоном.
+  // Задания с зоной — сначала спрашиваем геопозицию и ждём ответа сервера,
+  // чтобы не пришлось откатывать награду, если игрок физически не на месте.
+  function send(lat, lng, optimistic){
+    completedThisSession[qid] = true;
+    if(optimistic) applyQuestDoneUI(card, btn, xp, coins);
+
+    var body = { action: 'addXp', userId: userId, xp: xp, coins: coins, name: userName, city: '', questText: questText };
+    if(lat && lng){ body.lat = lat; body.lng = lng; }
+
+    fetch(GAME_API, { method: 'POST', body: JSON.stringify(body) })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data.success){
+        completedThisSession[qid] = false;
+        if(optimistic) revertQuestDoneUI(card, xp, coins);
+        if(data.alreadyDone) showToast('Уже выполнено сегодня');
+        else if(data.reason === 'not_in_zone') showToast('Вы не в зоне — до места ещё ' + data.distance + ' м');
+        else if(data.reason === 'location_required') showToast('Не удалось определить местоположение');
+        else showToast('Не получилось выполнить задание');
+        return;
+      }
+      if(!optimistic) applyQuestDoneUI(card, btn, xp, coins);
+      if(typeof data.newXp === 'number'){ state.xp = data.newXp; renderXp(); }
+      if(typeof data.newCoins === 'number'){ renderCoinBalance(data.newCoins); }
     })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(data){
-    if(data.alreadyDone){
-      // Сервер отказал — откатываем оптимистичное начисление обратно
-      state.xp -= xp;
-      state.coins -= coins;
-      renderXp();
-      renderCoinBalance(state.coins);
-      showToast('Уже выполнено сегодня');
-      return;
-    }
-    if(data.success && typeof data.newXp === 'number'){
-      state.xp = data.newXp; // подтверждаем реальным значением из таблицы
-      renderXp();
-    }
-    if(data.success && typeof data.newCoins === 'number'){
-      renderCoinBalance(data.newCoins);
-    }
-  })
-  .catch(function(err){
-    console.error('Не удалось сохранить XP:', err);
-    showToast('Не сохранилось, попробуйте позже');
-  });
+    .catch(function(err){
+      console.error('Не удалось сохранить XP:', err);
+      completedThisSession[qid] = false;
+      if(optimistic) revertQuestDoneUI(card, xp, coins);
+      showToast('Не сохранилось, попробуйте позже');
+    });
+  }
+
+  if(zoneId){
+    btn.disabled = true;
+    showToast('Определяем местоположение…');
+    getUserLocation().then(function(loc){
+      btn.disabled = false;
+      if(!loc){ showToast('Нет доступа к геолокации — разрешите её в настройках'); return; }
+      send(loc.lat, loc.lng, false);
+    });
+  } else {
+    send(null, null, true);
+  }
 }
 
 function showToast(text){
