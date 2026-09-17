@@ -826,6 +826,11 @@ var ZONE_CROWD_PRESET = {
   'средняя': 'islands#orangeDotIconWithCaption',
   'низкая': 'islands#greenDotIconWithCaption'
 };
+var ZONE_CROWD_COLOR = {
+  'высокая': '#FF5C5C',
+  'средняя': '#FFC93C',
+  'низкая': '#39FF6A'
+};
 var mwCurrentRoute = null;
 
 function mwBuildRoute(lat, lng){
@@ -835,11 +840,20 @@ function mwBuildRoute(lat, lng){
       return;
     }
     if(mwCurrentRoute){ mwMapInstance.geoObjects.remove(mwCurrentRoute); }
+    showToast('Строю маршрут…');
     mwCurrentRoute = new ymaps.multiRouter.MultiRoute({
       referencePoints: [[loc.lat, loc.lng], [lat, lng]],
       params: { routingMode: 'pedestrian' }
-    }, { boundsAutoApply: true });
+    }, { boundsAutoApply: true, wayPointFinishIconColor: '#aab1f0' });
     mwMapInstance.geoObjects.add(mwCurrentRoute);
+
+    mwCurrentRoute.model.events.add('requestsuccess', function(){
+      showToast('Маршрут построен');
+    });
+    mwCurrentRoute.model.events.add('requestfail', function(err){
+      console.error('Не удалось построить маршрут:', err);
+      showToast('Не удалось построить маршрут (см. консоль браузера)');
+    });
   });
 }
 
@@ -876,12 +890,22 @@ function initZonesMap(){
           });
           mwMapInstance.geoObjects.add(placemark);
 
-          var circle = new ymaps.Circle([[z.lat, z.lng], z.radius], {}, {
-            fillColor: '#aab1f033',
-            strokeColor: '#aab1f0',
-            strokeWidth: 1
+          // Три концентрических круга с падающей прозрачностью — имитация
+          // размытия по краю, раз обычный blur для геообъектов не поддерживается.
+          var crowdColor = ZONE_CROWD_COLOR[z.crowd] || ZONE_CROWD_COLOR['средняя'];
+          [
+            { mult: 1.6, fillAlpha: '10', hasStroke: false },
+            { mult: 1.25, fillAlpha: '22', hasStroke: false },
+            { mult: 1.0, fillAlpha: '3a', hasStroke: true }
+          ].forEach(function(layer){
+            var circle = new ymaps.Circle([[z.lat, z.lng], z.radius * layer.mult], {}, {
+              fillColor: crowdColor + layer.fillAlpha,
+              strokeColor: layer.hasStroke ? crowdColor : crowdColor + '00',
+              strokeWidth: layer.hasStroke ? 1 : 0,
+              strokeOpacity: layer.hasStroke ? 0.7 : 0
+            });
+            mwMapInstance.geoObjects.add(circle);
           });
-          mwMapInstance.geoObjects.add(circle);
         });
       })
       .catch(function(){
