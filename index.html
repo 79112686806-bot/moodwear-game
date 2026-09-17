@@ -1883,7 +1883,7 @@ function toggleQuest(btn){
         completedThisSession[qid] = false;
         if(optimistic) revertQuestDoneUI(card, xp, coins);
         if(data.alreadyDone) showToast('Уже выполнено сегодня');
-        else if(data.reason === 'not_in_zone') showToast('Вы не в зоне — до места ещё ' + data.distance + ' м');
+        else if(data.reason === 'not_in_zone') showToast(typeof data.distance === 'number' ? ('Вы не в зоне — до места ещё ' + data.distance + ' м') : 'Вы сейчас не в одной из зон на карте');
         else if(data.reason === 'location_required') showToast('Не удалось определить местоположение');
         else showToast('Не получилось выполнить задание');
         return;
