@@ -529,7 +529,12 @@ body{
         <h2>Карта зон</h2>
         <p class="mg-sub" id="mapStatusText">Открываю карту…</p>
       </div>
-      <div id="mapContainer" style="width:100%; height:420px; border-radius:16px; overflow:hidden; background:#0d0d0d; margin-bottom:16px;"></div>
+      <div id="mapContainer" style="width:100%; height:420px; border-radius:16px; overflow:hidden; background:#0d0d0d; margin-bottom:10px;"></div>
+      <div style="display:flex; gap:14px; flex-wrap:wrap; font-size:11px; color:#9a9a9a; margin-bottom:16px;">
+        <span>🔴 многолюдно</span>
+        <span>🟠 средне</span>
+        <span>🟢 спокойно</span>
+      </div>
     </div>
     <div class="mg-lock-overlay">
       <div class="mg-lock-icon">🔒</div>
@@ -816,6 +821,28 @@ function loadYandexMapsScript(callback){
   document.head.appendChild(script);
 }
 
+var ZONE_CROWD_PRESET = {
+  'высокая': 'islands#redDotIconWithCaption',
+  'средняя': 'islands#orangeDotIconWithCaption',
+  'низкая': 'islands#greenDotIconWithCaption'
+};
+var mwCurrentRoute = null;
+
+function mwBuildRoute(lat, lng){
+  getUserLocation().then(function(loc){
+    if(!loc || !mwMapInstance){
+      showToast('Не удалось определить ваше местоположение');
+      return;
+    }
+    if(mwCurrentRoute){ mwMapInstance.geoObjects.remove(mwCurrentRoute); }
+    mwCurrentRoute = new ymaps.multiRouter.MultiRoute({
+      referencePoints: [[loc.lat, loc.lng], [lat, lng]],
+      params: { routingMode: 'pedestrian' }
+    }, { boundsAutoApply: true });
+    mwMapInstance.geoObjects.add(mwCurrentRoute);
+  });
+}
+
 function initZonesMap(){
   if(mwMapInstance) return; // карта уже открывалась в этой сессии — не грузим повторно, экономим лимит запросов
   var statusEl = document.getElementById('mapStatusText');
@@ -834,13 +861,17 @@ function initZonesMap(){
           statusEl.textContent = 'Зоны пока не добавлены — загляните позже';
           return;
         }
-        statusEl.textContent = 'Задания рядом — подойдите ближе, чтобы выполнить';
+        var timeLabel = data.timeOfDay === 'утро' ? 'утренняя подборка' : data.timeOfDay === 'день' ? 'дневная подборка' : 'вечерняя подборка';
+        statusEl.textContent = 'Задания рядом — подойдите ближе, чтобы выполнить (' + timeLabel + ')';
         zones.forEach(function(z){
+          var preset = ZONE_CROWD_PRESET[z.crowd] || ZONE_CROWD_PRESET['средняя'];
+          var balloonBody = escapeHtml(z.description || '') +
+            '<div style="margin-top:8px;"><button onclick="mwBuildRoute(' + z.lat + ',' + z.lng + ')" style="background:#aab1f0; color:#101010; border:none; border-radius:8px; padding:6px 12px; font-weight:700; font-size:12px; cursor:pointer;">Маршрут туда →</button></div>';
           var placemark = new ymaps.Placemark([z.lat, z.lng], {
             balloonContentHeader: escapeHtml(z.name),
-            balloonContentBody: escapeHtml(z.description || '')
+            balloonContentBody: balloonBody
           }, {
-            preset: 'islands#violetDotIconWithCaption',
+            preset: preset,
             iconCaption: z.name
           });
           mwMapInstance.geoObjects.add(placemark);
