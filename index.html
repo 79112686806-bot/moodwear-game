@@ -997,6 +997,7 @@ var completedThisSession = {}; // чтобы не отправить одно и
 var userId = null;
 var userName = 'Игрок';
 var mwInsideVK = false; // true только если реально запущены внутри VK — используется, чтобы не пытаться звать vkBridge впустую там, где его некому слушать
+var mwLaunchParams = ''; // сырые vk_-параметры запуска (без "?") — нужны серверу, чтобы проверить подпись и не дать подделать userId
 
 // ---------- Получение пользователя через VK Bridge ----------
 // Если открыто внутри VK — берём настоящий ID через VK Bridge.
@@ -1016,6 +1017,7 @@ function startWithDemoUser(){
 }
 
 if (window.vkBridge) {
+  mwLaunchParams = window.location.search.replace(/^\?/, '');
   vkBridge.send('VKWebAppInit')
     .then(function(){ return vkBridge.send('VKWebAppGetUserInfo'); })
     .then(function(data){
@@ -1137,7 +1139,7 @@ function closeAvatarPicker(){
 function selectAvatar(value){
   fetch(GAME_API, {
     method: 'POST',
-    body: JSON.stringify({ action: 'setAvatar', userId: userId, value: value })
+    body: JSON.stringify({ action: 'setAvatar', userId: userId, value: value, vkParams: mwLaunchParams })
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
@@ -1155,7 +1157,7 @@ function selectAvatar(value){
 function selectEffect(value){
   fetch(GAME_API, {
     method: 'POST',
-    body: JSON.stringify({ action: 'setAvatarEffect', userId: userId, value: value })
+    body: JSON.stringify({ action: 'setAvatarEffect', userId: userId, value: value, vkParams: mwLaunchParams })
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
@@ -1312,7 +1314,7 @@ function saveContact(){
 
   fetch(GAME_API, {
     method: 'POST',
-    body: JSON.stringify({ action: 'updateContact', userId: userId, city: city, phone: phone, email: email })
+    body: JSON.stringify({ action: 'updateContact', userId: userId, city: city, phone: phone, email: email, vkParams: mwLaunchParams })
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
@@ -1375,7 +1377,7 @@ function submitPromoCode(){
 
   fetch(GAME_API, {
     method: 'POST',
-    body: JSON.stringify({ action: 'redeemCode', userId: userId, code: code, name: userName, city: '' })
+    body: JSON.stringify({ action: 'redeemCode', userId: userId, code: code, name: userName, city: '', vkParams: mwLaunchParams })
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
@@ -1590,7 +1592,7 @@ function buyShopItem(itemId, btn){
 
   fetch(GAME_API, {
     method: 'POST',
-    body: JSON.stringify({ action: 'buyShopItem', userId: userId, itemId: itemId })
+    body: JSON.stringify({ action: 'buyShopItem', userId: userId, itemId: itemId, vkParams: mwLaunchParams })
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
@@ -1764,7 +1766,7 @@ function claimLevelPrize(level, btn){
   btn.textContent = 'Забираю…';
   fetch(GAME_API, {
     method: 'POST',
-    body: JSON.stringify({ action: 'claimLevelPrize', userId: userId, level: level })
+    body: JSON.stringify({ action: 'claimLevelPrize', userId: userId, level: level, vkParams: mwLaunchParams })
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
@@ -1927,7 +1929,7 @@ function openAchDetail(index){
 function claimAchievement(achId, index){
   fetch(GAME_API, {
     method: 'POST',
-    body: JSON.stringify({ action: 'claimAchievement', userId: userId, achievementId: achId })
+    body: JSON.stringify({ action: 'claimAchievement', userId: userId, achievementId: achId, vkParams: mwLaunchParams })
   })
   .then(function(r){ return r.json(); })
   .then(function(data){
@@ -1997,7 +1999,7 @@ function toggleQuest(btn){
     completedThisSession[qid] = true;
     if(optimistic) applyQuestDoneUI(card, btn, xp, coins);
 
-    var body = { action: 'addXp', userId: userId, xp: xp, coins: coins, name: userName, city: '', questText: questText, bonus: card.dataset.bonus === '1' };
+    var body = { action: 'addXp', userId: userId, xp: xp, coins: coins, name: userName, city: '', questText: questText, bonus: card.dataset.bonus === '1', vkParams: mwLaunchParams };
     if(lat && lng){ body.lat = lat; body.lng = lng; }
 
     fetch(GAME_API, { method: 'POST', body: JSON.stringify(body) })
