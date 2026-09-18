@@ -240,15 +240,26 @@ body{
 .mg-quest[data-color="lilac"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(170,177,240,.4); }
 
 /* ---------- достижения ---------- */
-.mg-ach-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.mg-ach{
-  background:#0d0d0d; border:1px solid #232326; border-radius:14px;
-  padding:14px 8px; text-align:center; position:relative; overflow:hidden;
+.mg-ach-row{
+  display:flex; align-items:center; gap:12px; background:#0d0d0d; border:1px solid #232326;
+  border-radius:14px; padding:12px 14px; margin-bottom:10px; transition:border-color .3s ease, box-shadow .3s ease;
 }
-.mg-ach.locked{ opacity:.35; }
-.mg-ach-emoji{ font-size:22px; margin-bottom:8px; }
-.mg-ach-name{ font-size:10.5px; font-weight:700; line-height:1.3; }
-.mg-ach.unlocked{ border-color:rgba(170,177,240,.5); box-shadow:0 0 24px -14px rgba(170,177,240,.7); }
+.mg-ach-row.unlocked{ border-color:#aab1f0; box-shadow:0 0 16px -8px rgba(170,177,240,0.5); }
+.mg-ach-row-icon{ font-size:26px; flex-shrink:0; width:36px; text-align:center; }
+.mg-ach-row.locked .mg-ach-row-icon{ opacity:.4; filter:grayscale(1); }
+.mg-ach-row-body{ flex:1; min-width:0; }
+.mg-ach-row-name{ font-weight:700; font-size:13px; margin-bottom:5px; display:flex; align-items:center; gap:6px; color:#F4F4F5; }
+.mg-ach-row-check{ color:#39FF6A; font-size:12px; }
+.mg-ach-row-progress-bar{ height:5px; border-radius:10px; background:#1c1c1f; overflow:hidden; margin-bottom:4px; }
+.mg-ach-row-progress-fill{ display:block; height:100%; background:#aab1f0; transition:width .4s ease; }
+.mg-ach-row.unlocked .mg-ach-row-progress-fill{ background:#39FF6A; }
+.mg-ach-row-progress-text{ font-size:10.5px; color:#8a8a90; }
+.mg-ach-row-btn{
+  flex-shrink:0; background:none; border:1px solid #3a3a40; color:#9a9a9a; border-radius:20px;
+  padding:8px 12px; font-size:11px; cursor:pointer; white-space:nowrap;
+  transition:border-color .2s ease, color .2s ease;
+}
+.mg-ach-row-btn:hover{ border-color:#aab1f0; color:#F4F4F5; }
 
 /* ---------- награды ---------- */
 .mg-prize{
@@ -507,17 +518,8 @@ body{
 <div class="mg-page" id="page-achievements">
   <div class="mg-section">
     <h2>Достижения</h2>
-    <p class="mg-sub">Пока не подключены к прогрессу — скоро появятся настоящие условия</p>
-    <div class="mg-ach-grid">
-      <div class="mg-ach locked"><div class="mg-ach-emoji">🧊</div><div class="mg-ach-name">Ледокол</div></div>
-      <div class="mg-ach locked"><div class="mg-ach-emoji">🔥</div><div class="mg-ach-name">Марафонец</div></div>
-      <div class="mg-ach locked"><div class="mg-ach-emoji">🐉</div><div class="mg-ach-name">Коллекционер</div></div>
-      <div class="mg-ach locked"><div class="mg-ach-emoji">🦎</div><div class="mg-ach-name">Хамелеон</div></div>
-      <div class="mg-ach locked"><div class="mg-ach-emoji">📣</div><div class="mg-ach-name">Сарафан</div></div>
-      <div class="mg-ach locked"><div class="mg-ach-emoji">🏆</div><div class="mg-ach-name">Легенда квартала</div></div>
-      <div class="mg-ach locked"><div class="mg-ach-emoji">🎯</div><div class="mg-ach-name">Акробат</div></div>
-      <div class="mg-ach locked"><div class="mg-ach-emoji">☄️</div><div class="mg-ach-name">Метеор</div></div>
-    </div>
+    <p class="mg-sub" id="achStatusText">Загружаю…</p>
+    <div id="achList"></div>
   </div>
 </div>
 
@@ -760,6 +762,20 @@ body{
     <p class="mg-sub">С подпиской: карта зон, награды за уровень и эксклюзивные призы.</p>
     <button class="mg-code-btn" style="width:100%; margin:6px 0 10px;" onclick="goBuySubscriptionFromPromo()">Оформить подписку →</button>
     <button class="mg-signal-skip" onclick="closeSubPromo()">Не сейчас</button>
+  </div>
+</div>
+
+<div class="mg-signal-overlay" id="achDetailOverlay">
+  <div class="mg-signal-modal">
+    <div class="mg-signal-emoji" id="achDetailIcon">🏆</div>
+    <h3 id="achDetailName">Название</h3>
+    <p class="mg-sub" id="achDetailDesc">Описание условия</p>
+    <div class="mg-ach-row-progress-bar" style="margin:12px 0 6px;">
+      <span class="mg-ach-row-progress-fill" id="achDetailFill" style="width:0%;"></span>
+    </div>
+    <p class="mg-sub" id="achDetailProgress" style="margin-bottom:16px;">0 / 0</p>
+    <div id="achDetailAction"></div>
+    <button class="mg-signal-skip" onclick="closeAchDetail()">Закрыть</button>
   </div>
 </div>
 
@@ -1656,6 +1672,7 @@ function renderQuestsList(quests){
     card.dataset.questId = 'quest_' + i;
     card.dataset.questText = q.text; // настоящий текст, для сверки с сервером
     card.dataset.zoneId = q.zoneId || '';
+    card.dataset.bonus = q.bonus ? '1' : '';
     var statusSuffix = q.done ? ' · выполнено' : '';
     var bonusBadge = q.bonus ? '<span class="mg-bonus-badge">✨ бонус за сигнал</span>' : '';
     var zoneBadge = q.zoneId ? '<span class="mg-bonus-badge" style="background:none; border:1px solid #aab1f0; color:#aab1f0;">📍 нужно быть в зоне</span>' : '';
@@ -1841,6 +1858,94 @@ function showPage(name, btn){
   document.querySelectorAll('.mg-nav-item').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
   if(name === 'map') initZonesMap();
+  if(name === 'achievements') loadAchievements();
+}
+
+// ---------- Достижения ----------
+var mwAchievements = [];
+
+function loadAchievements(){
+  fetch(GAME_API + '?action=getAchievements&userId=' + encodeURIComponent(userId) + '&_t=' + Date.now(), { cache: 'no-store' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      mwAchievements = data.achievements || [];
+      renderAchievementsList();
+    })
+    .catch(function(){
+      document.getElementById('achStatusText').textContent = 'Не удалось загрузить достижения';
+    });
+}
+
+function renderAchievementsList(){
+  var list = document.getElementById('achList');
+  var status = document.getElementById('achStatusText');
+  if(!mwAchievements.length){
+    status.textContent = 'Достижений пока нет';
+    return;
+  }
+  var unlockedCount = mwAchievements.filter(function(a){ return a.unlocked; }).length;
+  status.textContent = 'Открыто ' + unlockedCount + ' из ' + mwAchievements.length + ' — от лёгких к сложным';
+
+  list.innerHTML = '';
+  mwAchievements.forEach(function(a, i){
+    var pct = Math.round((a.current / a.target) * 100);
+    var row = document.createElement('div');
+    row.className = 'mg-ach-row' + (a.unlocked ? ' unlocked' : ' locked');
+    row.innerHTML =
+      '<div class="mg-ach-row-icon">' + a.icon + '</div>' +
+      '<div class="mg-ach-row-body">' +
+        '<div class="mg-ach-row-name">' + escapeHtml(a.name) + (a.unlocked ? '<span class="mg-ach-row-check">✓ получено</span>' : '') + '</div>' +
+        '<div class="mg-ach-row-progress-bar"><span class="mg-ach-row-progress-fill" style="width:' + pct + '%;"></span></div>' +
+        '<div class="mg-ach-row-progress-text">' + (a.type === 'manual' ? (a.unlocked ? 'отмечено вручную' : 'отмечается вручную') : (a.current + ' / ' + a.target)) + '</div>' +
+      '</div>' +
+      '<button class="mg-ach-row-btn" onclick="openAchDetail(' + i + ')">Подробнее</button>';
+    list.appendChild(row);
+  });
+}
+
+function openAchDetail(index){
+  var a = mwAchievements[index];
+  if(!a) return;
+  document.getElementById('achDetailIcon').textContent = a.icon;
+  document.getElementById('achDetailName').textContent = a.name + (a.unlocked ? ' ✓' : '');
+  document.getElementById('achDetailDesc').textContent = a.description;
+  var pct = Math.round((a.current / a.target) * 100);
+  document.getElementById('achDetailFill').style.width = pct + '%';
+  document.getElementById('achDetailProgress').textContent = a.type === 'manual'
+    ? (a.unlocked ? 'Отмечено выполненным' : 'Сделали в жизни — отметьте сами')
+    : (a.current + ' / ' + a.target + (a.unlocked ? ' — выполнено' : ''));
+
+  var actionArea = document.getElementById('achDetailAction');
+  if(a.type === 'manual' && !a.unlocked){
+    actionArea.innerHTML = '<button class="mg-code-btn" style="width:100%; margin-bottom:10px;" onclick="claimAchievement(\'' + a.id + '\', ' + index + ')">✓ Я это сделал</button>';
+  } else {
+    actionArea.innerHTML = '';
+  }
+  document.getElementById('achDetailOverlay').classList.add('show');
+}
+
+function claimAchievement(achId, index){
+  fetch(GAME_API, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'claimAchievement', userId: userId, achievementId: achId })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(data.success){
+      showToast('🎉 Ачивка получена!');
+      loadAchievements();
+      closeAchDetail();
+    } else {
+      showToast('Не получилось отметить, попробуйте ещё раз');
+    }
+  })
+  .catch(function(){
+    showToast('Не получилось отметить, попробуйте ещё раз');
+  });
+}
+
+function closeAchDetail(){
+  document.getElementById('achDetailOverlay').classList.remove('show');
 }
 
 // ---------- Выполнение задания ----------
@@ -1892,7 +1997,7 @@ function toggleQuest(btn){
     completedThisSession[qid] = true;
     if(optimistic) applyQuestDoneUI(card, btn, xp, coins);
 
-    var body = { action: 'addXp', userId: userId, xp: xp, coins: coins, name: userName, city: '', questText: questText };
+    var body = { action: 'addXp', userId: userId, xp: xp, coins: coins, name: userName, city: '', questText: questText, bonus: card.dataset.bonus === '1' };
     if(lat && lng){ body.lat = lat; body.lng = lng; }
 
     fetch(GAME_API, { method: 'POST', body: JSON.stringify(body) })
