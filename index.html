@@ -841,19 +841,38 @@ function mwBuildRoute(lat, lng){
     }
     if(mwCurrentRoute){ mwMapInstance.geoObjects.remove(mwCurrentRoute); }
     showToast('Строю маршрут…');
-    mwCurrentRoute = new ymaps.multiRouter.MultiRoute({
-      referencePoints: [[loc.lat, loc.lng], [lat, lng]],
-      params: { routingMode: 'pedestrian' }
-    }, { boundsAutoApply: true, wayPointFinishIconColor: '#aab1f0' });
-    mwMapInstance.geoObjects.add(mwCurrentRoute);
 
-    mwCurrentRoute.model.events.add('requestsuccess', function(){
-      showToast('Маршрут построен');
-    });
-    mwCurrentRoute.model.events.add('requestfail', function(err){
-      console.error('Не удалось построить маршрут:', err);
-      showToast('Не удалось построить маршрут (см. консоль браузера)');
-    });
+    // Бесплатный публичный роутер OSRM (без ключей) — считает пеший маршрут,
+    // а рисуем его уже поверх карты Яндекса обычной линией.
+    var url = 'https://router.project-osrm.org/route/v1/foot/' +
+      loc.lng + ',' + loc.lat + ';' + lng + ',' + lat +
+      '?overview=full&geometries=geojson';
+
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(!data.routes || !data.routes.length){
+          showToast('Маршрут не найден');
+          return;
+        }
+        // OSRM отдаёт координаты в порядке [долгота, широта] — разворачиваем под Яндекс.Карты
+        var coords = data.routes[0].geometry.coordinates.map(function(c){ return [c[1], c[0]]; });
+        mwCurrentRoute = new ymaps.Polyline(coords, {}, {
+          strokeColor: '#aab1f0',
+          strokeWidth: 4,
+          strokeOpacity: 0.85
+        });
+        mwMapInstance.geoObjects.add(mwCurrentRoute);
+        mwMapInstance.setBounds(mwCurrentRoute.geometry.getBounds(), { checkZoomRange: true, zoomMargin: 40 });
+
+        var km = (data.routes[0].distance / 1000).toFixed(1);
+        var mins = Math.round(data.routes[0].duration / 60);
+        showToast('Маршрут построен: ' + km + ' км, ~' + mins + ' мин пешком');
+      })
+      .catch(function(err){
+        console.error('Не удалось построить маршрут:', err);
+        showToast('Не удалось построить маршрут — попробуйте ещё раз');
+      });
   });
 }
 
