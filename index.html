@@ -502,7 +502,7 @@ body{
 </div>
 
 <!-- ===== СТРАНИЦА: ЗАДАНИЯ ===== -->
-<div class="mg-page active" id="page-quests">
+<div class="mg-page" id="page-quests">
   <div class="mg-section">
     <h2>Сегодняшние задания</h2>
     <p class="mg-sub">Новые появляются каждый день в 9:00</p>
@@ -592,7 +592,7 @@ body{
 </div>
 
 <!-- ===== СТРАНИЦА: ПРОФИЛЬ ===== -->
-<div class="mg-page" id="page-profile">
+<div class="mg-page active" id="page-profile">
 
   <div class="mg-shop-subtabs mg-shop-subtabs-4">
     <button class="mg-shop-subtab active" id="ptabProfileBtn" onclick="showProfileSubtab('profile')">👤 Профиль</button>
@@ -604,6 +604,13 @@ body{
   <div id="ptabProfile">
     <div class="mg-section">
       <h2>Профиль</h2>
+      <div class="mg-prize" style="cursor:pointer;" onclick="openSignalChangeFromProfile()">
+        <div class="mg-prize-lvl" id="profileSignalDot">⚪</div>
+        <div style="flex:1; min-width:0;">
+          <div class="mg-prize-title">Сигнал сегодня</div>
+          <div class="mg-prize-desc" id="profileSignalText">Нажмите, чтобы выбрать или сменить</div>
+        </div>
+      </div>
       <div class="mg-prize">
         <div class="mg-prize-lvl">📅</div>
         <div>
@@ -696,7 +703,7 @@ body{
 </div>
 
 <div class="mg-nav">
-  <button class="mg-nav-item active" data-page="quests" onclick="showPage('quests', this)">
+  <button class="mg-nav-item" data-page="quests" onclick="showPage('quests', this)">
     <span class="mg-nav-icon">📋</span>Задания
   </button>
   <button class="mg-nav-item" data-page="achievements" onclick="showPage('achievements', this)">
@@ -708,25 +715,90 @@ body{
   <button class="mg-nav-item" data-page="shop" onclick="showPage('shop', this)">
     <span class="mg-nav-icon">🎁</span>Магазин
   </button>
-  <button class="mg-nav-item" data-page="profile" onclick="showPage('profile', this)">
+  <button class="mg-nav-item active" data-page="profile" onclick="showPage('profile', this)">
     <span class="mg-nav-icon">👤</span>Профиль
   </button>
 </div>
 
 <div class="mg-toast" id="toast">+5 XP</div>
 
+<div class="mg-signal-overlay" id="honestyOverlay">
+  <div class="mg-signal-modal">
+    <div class="mg-signal-emoji">🤝</div>
+    <h3>Прежде чем начать</h3>
+    <p class="mg-sub">Мы не можем это проверить — полагаемся на твою честность 😊<br>Если ты честен(на) — нажми ещё раз на галочку.</p>
+    <button class="mg-quest-btn" id="honestyConfirmBtn" style="width:100%; height:48px; border-radius:100px; margin-top:6px;" disabled onclick="confirmHonestyModal()">✓ <span id="honestyCountdown">(5)</span></button>
+  </div>
+</div>
+
+<div class="mg-signal-overlay" id="reflectOverlay">
+  <div class="mg-signal-modal">
+    <div class="mg-signal-emoji">🧐</div>
+    <h3>Ого, быстро!</h3>
+    <p class="mg-sub">Прошло совсем мало времени с прошлого задания. Расскажи в паре предложений: как ты себя чувствуешь, с кем поговорил(а) или кого увидел(а)?</p>
+    <textarea id="reflectAnswer" placeholder="Например: было немного неловко, но я подошёл к парню у кофейни и спросил дорогу — он оказался очень дружелюбным…" style="width:100%; min-height:90px; background:#0d0d0d; border:1px solid #2a2a2e; border-radius:12px; color:#F4F4F5; padding:12px; font-family:inherit; font-size:13px; box-sizing:border-box; margin-bottom:8px;"></textarea>
+    <p class="mg-sub" id="reflectError" style="color:#FF5C5C; display:none;">Опиши чуть подробнее — пары слов маловато 🙂</p>
+    <button class="mg-code-btn" style="width:100%; margin-bottom:10px;" onclick="submitReflectAnswer()">Отправить</button>
+    <button class="mg-signal-skip" onclick="cancelReflect()">Отмена</button>
+  </div>
+</div>
+
+<div class="mg-signal-overlay" id="frozenOverlay">
+  <div class="mg-signal-modal">
+    <div class="mg-signal-emoji">🥶</div>
+    <h3>Небольшая пауза</h3>
+    <p class="mg-sub" id="frozenText">Задания заморожены на 15 минут — похоже, вы торопитесь больше, чем стоит.</p>
+    <button class="mg-signal-skip" onclick="closeFrozenOverlay()">Понятно</button>
+  </div>
+</div>
+
+<div class="mg-signal-overlay" id="welcomeOverlay">
+  <div class="mg-signal-modal">
+    <div class="mg-signal-emoji">🐉</div>
+    <h3>Добро пожаловать в MOODWEAR Game</h3>
+    <p class="mg-sub">Браслет MOODWEAR — это сигнал без слов: цвет на запястье сразу говорит, открыты ли вы для общения прямо сейчас.</p>
+    <div style="text-align:left; margin:14px 0;">
+      <div class="mg-prize" style="margin-bottom:8px;">
+        <div class="mg-prize-lvl">🟢</div>
+        <div><div class="mg-prize-title">OPEN</div><div class="mg-prize-desc">Готов знакомиться и общаться</div></div>
+      </div>
+      <div class="mg-prize" style="margin-bottom:8px;">
+        <div class="mg-prize-lvl">🟡</div>
+        <div><div class="mg-prize-title">VIBE</div><div class="mg-prize-desc">Можно поговорить, без обязательств</div></div>
+      </div>
+      <div class="mg-prize">
+        <div class="mg-prize-lvl">🔴</div>
+        <div><div class="mg-prize-title">OFF</div><div class="mg-prize-desc">Не сегодня, я в своей зоне</div></div>
+      </div>
+    </div>
+    <p class="mg-sub">Игра каждый день подбирает задания под ваш сигнал — маленькие шаги к тому, чтобы увереннее заговорить с людьми.</p>
+    <button class="mg-code-btn" style="width:100%;" onclick="closeWelcomeOverlay()">Понятно, дальше →</button>
+  </div>
+</div>
+
 <div class="mg-signal-overlay" id="signalOverlay">
   <div class="mg-signal-modal">
     <div class="mg-signal-emoji">🐉</div>
     <h3>Какой браслет сегодня на тебе?</h3>
     <p class="mg-sub">Подберём бонусное задание под твой сигнал</p>
-    <div class="mg-signal-btns">
+
+    <div id="signalStepChoose">
+      <button class="mg-signal-btn" style="width:100%;" onclick="showSignalColors()">🟢🟡🔴 Выбрать сигнал</button>
+      <button class="mg-signal-btn" style="width:100%; margin-top:10px;" data-signal="none" onclick="showNoBraceletStep()">🚫 Нет браслета</button>
+    </div>
+
+    <div class="mg-signal-btns" id="signalStepColors" style="display:none;">
       <button class="mg-signal-btn" data-signal="green" onclick="chooseSignal('green')">🟢 OPEN</button>
       <button class="mg-signal-btn" data-signal="yellow" onclick="chooseSignal('yellow')">🟡 VIBE</button>
       <button class="mg-signal-btn" data-signal="red" onclick="chooseSignal('red')">🔴 OFF</button>
-      <button class="mg-signal-btn" data-signal="none" onclick="chooseSignal('none')">🚫 Нет браслета</button>
     </div>
-    <button class="mg-signal-skip" onclick="chooseSignal('')">Пропустить сегодня</button>
+
+    <div id="signalStepNoBracelet" style="display:none;">
+      <p class="mg-sub">Игра работает и без браслета — но с ним куда интереснее. Выбирайте, что вам сейчас ближе:</p>
+      <button class="mg-code-btn" style="width:100%; margin-bottom:10px;" onclick="goBuyBraceletFromSignal()">Хочу браслет + подписку →</button>
+      <button class="mg-code-btn" style="width:100%; margin-bottom:10px;" onclick="goBuySubscriptionOnlyFromSignal()">Только подписка, играть свободно →</button>
+      <button class="mg-signal-skip" onclick="chooseSignal('none')">Закрыть</button>
+    </div>
   </div>
 </div>
 
@@ -739,7 +811,7 @@ body{
     <div class="mg-avatar-grid" id="avatarPickList"></div>
     <p class="mg-sub" style="text-align:left; margin:14px 0 6px;">Эффект</p>
     <div class="mg-avatar-grid" id="effectPickList"></div>
-    <button class="mg-signal-skip" onclick="closeAvatarPicker()">Закрыть</button>
+    <button class="mg-signal-skip" style="margin-top:16px;" onclick="closeAvatarPicker()">Закрыть</button>
   </div>
 </div>
 
@@ -1048,11 +1120,69 @@ function getTodaySignal(){
   return localStorage.getItem('mwSignalValue') || '';
 }
 
+function openSignalChangeFromProfile(){
+  document.getElementById('signalStepChoose').style.display = 'none';
+  document.getElementById('signalStepColors').style.display = '';
+  document.getElementById('signalStepNoBracelet').style.display = 'none';
+  document.getElementById('signalOverlay').classList.add('show');
+}
+
+function renderProfileSignal(){
+  var dotEl = document.getElementById('profileSignalDot');
+  var textEl = document.getElementById('profileSignalText');
+  if(!dotEl) return;
+  var signal = getTodaySignal();
+  var map = {
+    green: ['🟢', 'OPEN — сегодня выбран'],
+    yellow: ['🟡', 'VIBE — сегодня выбран'],
+    red: ['🔴', 'OFF — сегодня выбран'],
+    none: ['🚫', 'Без браслета сегодня']
+  };
+  if(signal && map[signal]){
+    dotEl.textContent = map[signal][0];
+    textEl.textContent = map[signal][1] + ' · нажмите, чтобы сменить';
+  } else {
+    dotEl.textContent = '⚪';
+    textEl.textContent = 'Нажмите, чтобы выбрать';
+  }
+}
+
+function closeWelcomeOverlay(){
+  document.getElementById('welcomeOverlay').classList.remove('show');
+  document.getElementById('signalOverlay').classList.add('show');
+}
+
+function showSignalColors(){
+  document.getElementById('signalStepChoose').style.display = 'none';
+  document.getElementById('signalStepColors').style.display = '';
+}
+
+function showNoBraceletStep(){
+  document.getElementById('signalStepChoose').style.display = 'none';
+  document.getElementById('signalStepNoBracelet').style.display = '';
+}
+
+function goBuyBraceletFromSignal(){
+  window.open('https://getmoodwear.ru/', '_blank');
+  chooseSignal('none');
+}
+
+function goBuySubscriptionOnlyFromSignal(){
+  window.open('https://getmoodwear.ru/podpiska/', '_blank');
+  chooseSignal('none');
+}
+
 function chooseSignal(signal){
   localStorage.setItem('mwSignalDate', getTodayDateStr());
   localStorage.setItem('mwSignalValue', signal);
   document.getElementById('signalOverlay').classList.remove('show');
+  // возвращаем модалку в начальное состояние на следующий раз
+  document.getElementById('signalStepChoose').style.display = '';
+  document.getElementById('signalStepColors').style.display = 'none';
+  document.getElementById('signalStepNoBracelet').style.display = 'none';
   loadQuests();
+  showPage('profile');
+  renderProfileSignal();
 }
 
 // ---------- Загрузка профиля ----------
@@ -1095,12 +1225,14 @@ function loadInit(){
 
       // Сигнал на сегодня уже был известен на момент запроса — значит задания
       // в ответе уже правильно подобраны под него, показываем сразу.
-      // Если нет — покажется модалка выбора браслета, а задания подгрузит chooseSignal().
+      // Если нет — вся цепочка (приветствие → выбор сигнала → Профиль)
+      // повторяется КАЖДЫЙ день при первом заходе, а не только один раз.
       if(todaySignal !== null){
         renderQuestsList(data.quests || []);
       } else {
-        document.getElementById('signalOverlay').classList.add('show');
+        document.getElementById('welcomeOverlay').classList.add('show');
       }
+      renderProfileSignal();
     })
     .catch(function(err){
       console.error('Ошибка загрузки:', err);
@@ -1338,16 +1470,15 @@ function openSubscriptionPage(){
   window.open(SUBSCRIPTION_PAGE_URL, '_blank');
 }
 
-// ---------- Напоминание о подписке (раз в час, только без подписки, закрывается) ----------
-var SUB_PROMO_INTERVAL_MS = 60 * 60 * 1000; // раз в час
-
-function maybeShowSubscriptionPromo(){
+// ---------- Предложение подписки (не чаще раза в день, после 2 выполненных
+// заданий за сегодня — вместо прежнего показа каждый час) ----------
+function maybeShowSubscriptionPromoAfterQuest(){
   if(state.hasSubscription) return;
-  // не показываем поверх модалки выбора браслета дня — подождём, когда её закроют
-  if(document.getElementById('signalOverlay').classList.contains('show')) return;
-  var last = Number(localStorage.getItem('mwSubPromoLastShown') || 0);
-  if(Date.now() - last < SUB_PROMO_INTERVAL_MS) return;
-  localStorage.setItem('mwSubPromoLastShown', String(Date.now()));
+  var shownDate = localStorage.getItem('mwSubPromoShownDate');
+  if(shownDate === getTodayDateStr()) return; // уже показывали сегодня
+  var doneCount = document.querySelectorAll('#questsList .mg-quest.done').length;
+  if(doneCount < 2) return;
+  localStorage.setItem('mwSubPromoShownDate', getTodayDateStr());
   document.getElementById('subPromoOverlay').classList.add('show');
 }
 
@@ -1359,12 +1490,6 @@ function goBuySubscriptionFromPromo(){
   closeSubPromo();
   openSubscriptionPage();
 }
-
-// Первая проверка — с небольшой задержкой после старта (не сразу поверх
-// модалки браслета дня), дальше перепроверяем раз в несколько минут —
-// чтобы окно само появилось снова примерно через час, если игра открыта долго.
-setTimeout(maybeShowSubscriptionPromo, 8000);
-setInterval(maybeShowSubscriptionPromo, 5 * 60 * 1000);
 
 function submitPromoCode(){
   var input = document.getElementById('promoCodeInput');
@@ -1855,10 +1980,11 @@ function loadMyRewards(){
 }
 
 function showPage(name, btn){
+  if(!btn) btn = document.querySelector('.mg-nav-item[data-page="' + name + '"]');
   document.querySelectorAll('.mg-page').forEach(function(p){ p.classList.remove('active'); });
   document.getElementById('page-' + name).classList.add('active');
   document.querySelectorAll('.mg-nav-item').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
+  if(btn) btn.classList.add('active');
   if(name === 'map') initZonesMap();
   if(name === 'achievements') loadAchievements();
 }
@@ -1972,6 +2098,7 @@ function applyQuestDoneUI(card, btn, xp, coins){
   } else {
     showToast('+' + xp + ' XP' + (coins ? ' · +' + coins + ' 🪙' : ''));
   }
+  setTimeout(maybeShowSubscriptionPromoAfterQuest, 1300);
 }
 
 function revertQuestDoneUI(card, xp, coins){
@@ -1982,19 +2109,134 @@ function revertQuestDoneUI(card, xp, coins){
   renderCoinBalance(state.coins);
 }
 
+// ---------- Честная проверка перед выполнением задания ----------
+var HONESTY_MODAL_KEY = 'mwHonestyModalSeen';
+var RAPID_THRESHOLD_MS = 5 * 60 * 1000;  // меньше 5 минут с прошлого выполненного — подозрительно быстро
+var FREEZE_MS = 15 * 60 * 1000;
+var mwQuestionnaireFailCount = 0;
+var mwPendingQuest = null;
+
+function isQuestsFrozen(){
+  var until = Number(localStorage.getItem('mwQuestsFrozenUntil') || 0);
+  return Date.now() < until;
+}
+function getFrozenMinutesLeft(){
+  var until = Number(localStorage.getItem('mwQuestsFrozenUntil') || 0);
+  return Math.max(1, Math.ceil((until - Date.now()) / 60000));
+}
+function freezeQuests(){
+  localStorage.setItem('mwQuestsFrozenUntil', String(Date.now() + FREEZE_MS));
+  document.getElementById('frozenText').textContent = 'Задания заморожены на 15 минут — похоже, вы торопитесь больше, чем стоит.';
+  document.getElementById('frozenOverlay').classList.add('show');
+}
+function closeFrozenOverlay(){
+  document.getElementById('frozenOverlay').classList.remove('show');
+}
+
+function openHonestyModal(){
+  var overlay = document.getElementById('honestyOverlay');
+  var confirmBtn = document.getElementById('honestyConfirmBtn');
+  var countdownEl = document.getElementById('honestyCountdown');
+  confirmBtn.disabled = true;
+  var secondsLeft = 5;
+  countdownEl.textContent = '(' + secondsLeft + ')';
+  overlay.classList.add('show');
+  var timer = setInterval(function(){
+    secondsLeft--;
+    if(secondsLeft <= 0){
+      clearInterval(timer);
+      confirmBtn.disabled = false;
+      countdownEl.textContent = '';
+    } else {
+      countdownEl.textContent = '(' + secondsLeft + ')';
+    }
+  }, 1000);
+}
+
+function confirmHonestyModal(){
+  document.getElementById('honestyOverlay').classList.remove('show');
+  localStorage.setItem(HONESTY_MODAL_KEY, '1');
+  if(mwPendingQuest){
+    proceedWithQuest(mwPendingQuest.card, mwPendingQuest.btn);
+    mwPendingQuest = null;
+  }
+}
+
+function submitReflectAnswer(){
+  var textEl = document.getElementById('reflectAnswer');
+  var errorEl = document.getElementById('reflectError');
+  var text = textEl.value.trim();
+  var wordCount = text.split(/\s+/).filter(function(w){ return w.length > 0; }).length;
+
+  if(text.length < 20 || wordCount < 4){
+    mwQuestionnaireFailCount++;
+    if(mwQuestionnaireFailCount >= 2){
+      document.getElementById('reflectOverlay').classList.remove('show');
+      mwPendingQuest = null;
+      freezeQuests();
+      return;
+    }
+    errorEl.style.display = '';
+    return;
+  }
+
+  errorEl.style.display = 'none';
+  document.getElementById('reflectOverlay').classList.remove('show');
+  if(mwPendingQuest){
+    proceedWithQuest(mwPendingQuest.card, mwPendingQuest.btn);
+    mwPendingQuest = null;
+  }
+}
+
+function cancelReflect(){
+  document.getElementById('reflectOverlay').classList.remove('show');
+  mwPendingQuest = null;
+}
+
+// ---------- Выполнение задания ----------
 function toggleQuest(btn){
   var card = btn.closest('.mg-quest');
   var qid = card.dataset.questId;
-  var questText = card.dataset.questText;
   if(card.classList.contains('done') || completedThisSession[qid]) return;
 
+  if(isQuestsFrozen()){
+    document.getElementById('frozenText').textContent = 'Задания заморожены ещё на ' + getFrozenMinutesLeft() + ' мин — похоже, вы торопитесь больше, чем стоит.';
+    document.getElementById('frozenOverlay').classList.add('show');
+    return;
+  }
+
+  mwPendingQuest = { card: card, btn: btn };
+
+  // Самое первое выполнение за весь аккаунт — короткое честное предупреждение,
+  // с задержкой, чтобы точно успели прочитать (кнопка недоступна первые 5 секунд)
+  if(!localStorage.getItem(HONESTY_MODAL_KEY)){
+    openHonestyModal();
+    return;
+  }
+
+  // Слишком быстро после предыдущего выполненного — просим коротко описать,
+  // что произошло, вместо мгновенного зачёта
+  var last = Number(localStorage.getItem('mwLastQuestCompletionTime') || 0);
+  if(last && (Date.now() - last) < RAPID_THRESHOLD_MS){
+    mwQuestionnaireFailCount = 0;
+    document.getElementById('reflectAnswer').value = '';
+    document.getElementById('reflectError').style.display = 'none';
+    document.getElementById('reflectOverlay').classList.add('show');
+    return;
+  }
+
+  proceedWithQuest(card, btn);
+}
+
+// Собственно выполнение — то, что раньше было внутри toggleQuest целиком,
+// геопривязка зон работает как и раньше, без изменений.
+function proceedWithQuest(card, btn){
+  var qid = card.dataset.questId;
+  var questText = card.dataset.questText;
   var xp = parseInt(card.dataset.xp, 10) || 0;
   var coins = parseInt(card.dataset.coins, 10) || 0;
   var zoneId = card.dataset.zoneId || '';
 
-  // Задания без зоны — как раньше, зачисляем сразу, сервер подтверждает фоном.
-  // Задания с зоной — сначала спрашиваем геопозицию и ждём ответа сервера,
-  // чтобы не пришлось откатывать награду, если игрок физически не на месте.
   function send(lat, lng, optimistic){
     completedThisSession[qid] = true;
     if(optimistic) applyQuestDoneUI(card, btn, xp, coins);
@@ -2017,6 +2259,7 @@ function toggleQuest(btn){
       if(!optimistic) applyQuestDoneUI(card, btn, xp, coins);
       if(typeof data.newXp === 'number'){ state.xp = data.newXp; renderXp(); }
       if(typeof data.newCoins === 'number'){ renderCoinBalance(data.newCoins); }
+      localStorage.setItem('mwLastQuestCompletionTime', String(Date.now()));
     })
     .catch(function(err){
       console.error('Не удалось сохранить XP:', err);
