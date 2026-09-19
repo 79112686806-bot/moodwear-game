@@ -2110,25 +2110,14 @@ function revertQuestDoneUI(card, xp, coins){
 }
 
 // ---------- Честная проверка перед выполнением задания ----------
+// Заморозка и счётчик неудачных попыток теперь считаются НА СЕРВЕРЕ (см.
+// addXp в backend) — так их нельзя обойти, очистив данные браузера или
+// открыв игру с другого устройства. Здесь остался только разовый экран
+// напоминания при самом первом выполнении — для него сервер не нужен,
+// это просто мягкая подсказка, не защита.
 var HONESTY_MODAL_KEY = 'mwHonestyModalSeen';
-var RAPID_THRESHOLD_MS = 5 * 60 * 1000;  // меньше 5 минут с прошлого выполненного — подозрительно быстро
-var FREEZE_MS = 15 * 60 * 1000;
-var mwQuestionnaireFailCount = 0;
 var mwPendingQuest = null;
 
-function isQuestsFrozen(){
-  var until = Number(localStorage.getItem('mwQuestsFrozenUntil') || 0);
-  return Date.now() < until;
-}
-function getFrozenMinutesLeft(){
-  var until = Number(localStorage.getItem('mwQuestsFrozenUntil') || 0);
-  return Math.max(1, Math.ceil((until - Date.now()) / 60000));
-}
-function freezeQuests(){
-  localStorage.setItem('mwQuestsFrozenUntil', String(Date.now() + FREEZE_MS));
-  document.getElementById('frozenText').textContent = 'Задания заморожены на 15 минут — похоже, вы торопитесь больше, чем стоит.';
-  document.getElementById('frozenOverlay').classList.add('show');
-}
 function closeFrozenOverlay(){
   document.getElementById('frozenOverlay').classList.remove('show');
 }
@@ -2157,33 +2146,16 @@ function confirmHonestyModal(){
   document.getElementById('honestyOverlay').classList.remove('show');
   localStorage.setItem(HONESTY_MODAL_KEY, '1');
   if(mwPendingQuest){
-    proceedWithQuest(mwPendingQuest.card, mwPendingQuest.btn);
+    proceedWithQuest(mwPendingQuest.card, mwPendingQuest.btn, '');
     mwPendingQuest = null;
   }
 }
 
 function submitReflectAnswer(){
-  var textEl = document.getElementById('reflectAnswer');
-  var errorEl = document.getElementById('reflectError');
-  var text = textEl.value.trim();
-  var wordCount = text.split(/\s+/).filter(function(w){ return w.length > 0; }).length;
-
-  if(text.length < 20 || wordCount < 4){
-    mwQuestionnaireFailCount++;
-    if(mwQuestionnaireFailCount >= 2){
-      document.getElementById('reflectOverlay').classList.remove('show');
-      mwPendingQuest = null;
-      freezeQuests();
-      return;
-    }
-    errorEl.style.display = '';
-    return;
-  }
-
-  errorEl.style.display = 'none';
+  var text = document.getElementById('reflectAnswer').value.trim();
   document.getElementById('reflectOverlay').classList.remove('show');
   if(mwPendingQuest){
-    proceedWithQuest(mwPendingQuest.card, mwPendingQuest.btn);
+    proceedWithQuest(mwPendingQuest.card, mwPendingQuest.btn, text);
     mwPendingQuest = null;
   }
 }
@@ -2199,12 +2171,6 @@ function toggleQuest(btn){
   var qid = card.dataset.questId;
   if(card.classList.contains('done') || completedThisSession[qid]) return;
 
-  if(isQuestsFrozen()){
-    document.getElementById('frozenText').textContent = 'Задания заморожены ещё на ' + getFrozenMinutesLeft() + ' мин — похоже, вы торопитесь больше, чем стоит.';
-    document.getElementById('frozenOverlay').classList.add('show');
-    return;
-  }
-
   mwPendingQuest = { card: card, btn: btn };
 
   // Самое первое выполнение за весь аккаунт — короткое честное предупреждение,
@@ -2214,71 +2180,76 @@ function toggleQuest(btn){
     return;
   }
 
-  // Слишком быстро после предыдущего выполненного — просим коротко описать,
-  // что произошло, вместо мгновенного зачёта
-  var last = Number(localStorage.getItem('mwLastQuestCompletionTime') || 0);
-  if(last && (Date.now() - last) < RAPID_THRESHOLD_MS){
-    mwQuestionnaireFailCount = 0;
-    document.getElementById('reflectAnswer').value = '';
-    document.getElementById('reflectError').style.display = 'none';
-    document.getElementById('reflectOverlay').classList.add('show');
-    return;
-  }
-
-  proceedWithQuest(card, btn);
+  proceedWithQuest(card, btn, '');
 }
 
-// Собственно выполнение — то, что раньше было внутри toggleQuest целиком,
-// геопривязка зон работает как и раньше, без изменений.
-function proceedWithQuest(card, btn){
+// Собственно выполнение. Теперь ВСЕГДА ждём ответ сервера, прежде чем
+// обновлять экран — раньше для заданий без зоны экран обновлялся сразу
+// оптимистично, но раз сервер теперь может ответить «опишите подробнее»
+// или «заморожено», оптимистичное обновление больше не подходит: пришлось
+// бы откатывать его слишком часто.
+function proceedWithQuest(card, btn, reflectionAnswer){
   var qid = card.dataset.questId;
   var questText = card.dataset.questText;
   var xp = parseInt(card.dataset.xp, 10) || 0;
   var coins = parseInt(card.dataset.coins, 10) || 0;
   var zoneId = card.dataset.zoneId || '';
 
-  function send(lat, lng, optimistic){
-    completedThisSession[qid] = true;
-    if(optimistic) applyQuestDoneUI(card, btn, xp, coins);
+  function send(lat, lng){
+    btn.disabled = true;
 
     var body = { action: 'addXp', userId: userId, xp: xp, coins: coins, name: userName, city: '', questText: questText, bonus: card.dataset.bonus === '1', vkParams: mwLaunchParams };
     if(lat && lng){ body.lat = lat; body.lng = lng; }
+    if(reflectionAnswer) body.reflectionAnswer = reflectionAnswer;
 
     fetch(GAME_API, { method: 'POST', body: JSON.stringify(body) })
     .then(function(r){ return r.json(); })
     .then(function(data){
+      btn.disabled = false;
+
       if(!data.success){
-        completedThisSession[qid] = false;
-        if(optimistic) revertQuestDoneUI(card, xp, coins);
-        if(data.alreadyDone) showToast('Уже выполнено сегодня');
-        else if(data.reason === 'not_in_zone') showToast(typeof data.distance === 'number' ? ('Вы не в зоне — до места ещё ' + data.distance + ' м') : 'Вы сейчас не в одной из зон на карте');
-        else if(data.reason === 'location_required') showToast('Не удалось определить местоположение');
-        else showToast('Не получилось выполнить задание');
+        if(data.alreadyDone){ showToast('Уже выполнено сегодня'); return; }
+
+        if(data.reason === 'frozen'){
+          document.getElementById('frozenText').textContent = 'Задания заморожены ещё на ' + (data.minutesLeft || 15) + ' мин — похоже, вы торопитесь больше, чем стоит.';
+          document.getElementById('frozenOverlay').classList.add('show');
+          return;
+        }
+        if(data.reason === 'reflection_required'){
+          mwPendingQuest = { card: card, btn: btn };
+          document.getElementById('reflectAnswer').value = '';
+          var errEl = document.getElementById('reflectError');
+          errEl.textContent = (data.failCount >= 1) ? 'Ещё раз, только чуть подробнее 🙂' : 'Опиши чуть подробнее — пары слов маловато 🙂';
+          errEl.style.display = '';
+          document.getElementById('reflectOverlay').classList.add('show');
+          return;
+        }
+        if(data.reason === 'not_in_zone'){ showToast(typeof data.distance === 'number' ? ('Вы не в зоне — до места ещё ' + data.distance + ' м') : 'Вы сейчас не в одной из зон на карте'); return; }
+        if(data.reason === 'location_required'){ showToast('Не удалось определить местоположение'); return; }
+        showToast('Не получилось выполнить задание');
         return;
       }
-      if(!optimistic) applyQuestDoneUI(card, btn, xp, coins);
+
+      completedThisSession[qid] = true;
+      applyQuestDoneUI(card, btn, xp, coins);
       if(typeof data.newXp === 'number'){ state.xp = data.newXp; renderXp(); }
       if(typeof data.newCoins === 'number'){ renderCoinBalance(data.newCoins); }
-      localStorage.setItem('mwLastQuestCompletionTime', String(Date.now()));
     })
     .catch(function(err){
       console.error('Не удалось сохранить XP:', err);
-      completedThisSession[qid] = false;
-      if(optimistic) revertQuestDoneUI(card, xp, coins);
+      btn.disabled = false;
       showToast('Не сохранилось, попробуйте позже');
     });
   }
 
   if(zoneId){
-    btn.disabled = true;
     showToast('Определяем местоположение…');
     getUserLocation().then(function(loc){
-      btn.disabled = false;
       if(!loc){ showToast('Нет доступа к геолокации — разрешите её в настройках'); return; }
-      send(loc.lat, loc.lng, false);
+      send(loc.lat, loc.lng);
     });
   } else {
-    send(null, null, true);
+    send(null, null);
   }
 }
 
