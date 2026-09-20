@@ -2130,7 +2130,7 @@ function revertQuestDoneUI(card, xp, coins){
 // открыв игру с другого устройства. Здесь остался только разовый экран
 // напоминания при самом первом выполнении — для него сервер не нужен,
 // это просто мягкая подсказка, не защита.
-var HONESTY_MODAL_KEY = 'mwHonestyModalSeen';
+var HONESTY_MODAL_KEY = 'mwHonestyShownDate'; // теперь хранит ДАТУ последнего показа, не просто "видел ли вообще"
 var mwPendingQuest = null;
 
 var mwFreezeInterval = null;
@@ -2146,6 +2146,8 @@ function startQuestsFreeze(untilMs){
       clearInterval(mwFreezeInterval);
       wrap.classList.remove('locked');
       showToast('Можно продолжать — заморозка снята');
+      // после заморозки — честное напоминание снова, даже если сегодня уже видели
+      localStorage.removeItem(HONESTY_MODAL_KEY);
       return;
     }
     var totalSeconds = Math.ceil(msLeft / 1000);
@@ -2185,7 +2187,7 @@ function openHonestyModal(){
 
 function confirmHonestyModal(){
   document.getElementById('honestyOverlay').classList.remove('show');
-  localStorage.setItem(HONESTY_MODAL_KEY, '1');
+  localStorage.setItem(HONESTY_MODAL_KEY, getTodayDateStr());
   if(mwPendingQuest){
     proceedWithQuest(mwPendingQuest.card, mwPendingQuest.btn, '');
     mwPendingQuest = null;
@@ -2214,9 +2216,10 @@ function toggleQuest(btn){
 
   mwPendingQuest = { card: card, btn: btn };
 
-  // Самое первое выполнение за весь аккаунт — короткое честное предупреждение,
-  // с задержкой, чтобы точно успели прочитать (кнопка недоступна первые 5 секунд)
-  if(!localStorage.getItem(HONESTY_MODAL_KEY)){
+  // Первое выполнение сегодня (или сразу после того, как закончилась
+  // заморозка) — короткое честное предупреждение, с задержкой, чтобы точно
+  // успели прочитать (кнопка недоступна первые 5 секунд)
+  if(localStorage.getItem(HONESTY_MODAL_KEY) !== getTodayDateStr()){
     openHonestyModal();
     return;
   }
