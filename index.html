@@ -503,13 +503,22 @@ body{
 
 <!-- ===== СТРАНИЦА: ЗАДАНИЯ ===== -->
 <div class="mg-page" id="page-quests">
-  <div class="mg-section">
-    <h2>Сегодняшние задания</h2>
-    <p class="mg-sub">Новые появляются каждый день в 9:00</p>
-    <div id="questsList">
-      <div class="mg-skeleton"><div class="mg-skel-icon"></div><div class="mg-skel-lines"><div class="mg-skel-line"></div><div class="mg-skel-line short"></div></div></div>
-      <div class="mg-skeleton"><div class="mg-skel-icon"></div><div class="mg-skel-lines"><div class="mg-skel-line"></div><div class="mg-skel-line short"></div></div></div>
-      <div class="mg-skeleton"><div class="mg-skel-icon"></div><div class="mg-skel-lines"><div class="mg-skel-line"></div><div class="mg-skel-line short"></div></div></div>
+  <div class="mg-lock-wrap" id="questsLockWrap">
+    <div class="mg-lock-content">
+      <div class="mg-section">
+        <h2>Сегодняшние задания</h2>
+        <p class="mg-sub">Новые появляются каждый день в 9:00</p>
+        <div id="questsList">
+          <div class="mg-skeleton"><div class="mg-skel-icon"></div><div class="mg-skel-lines"><div class="mg-skel-line"></div><div class="mg-skel-line short"></div></div></div>
+          <div class="mg-skeleton"><div class="mg-skel-icon"></div><div class="mg-skel-lines"><div class="mg-skel-line"></div><div class="mg-skel-line short"></div></div></div>
+          <div class="mg-skeleton"><div class="mg-skel-icon"></div><div class="mg-skel-lines"><div class="mg-skel-line"></div><div class="mg-skel-line short"></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="mg-lock-overlay">
+      <div class="mg-lock-icon">🥶</div>
+      <div class="mg-lock-text">Вы подозрительно быстро выполняете задания — переведите дух</div>
+      <div class="mg-lock-text" id="questsFreezeTimer" style="font-family:'Unbounded', Arial, sans-serif; font-size:16px; color:#aab1f0;">15:00</div>
     </div>
   </div>
 </div>
@@ -1111,7 +1120,12 @@ if (window.vkBridge) {
 
 // ---------- Выбор браслета дня ----------
 function getTodayDateStr(){
-  return new Date().toISOString().slice(0, 10);
+  // Россия не переходит на летнее/зимнее время — Москва всегда UTC+3.
+  // Раньше здесь было чистое UTC-время браузера, из-за чего клиент и
+  // сервер (который считает по Europe/Moscow) расходились в дне примерно
+  // с полуночи до 3 утра по Москве — отсюда и путаница со «вчерашними» заданиями.
+  var moscow = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  return moscow.toISOString().slice(0, 10);
 }
 
 function getTodaySignal(){
@@ -1210,6 +1224,7 @@ function loadInit(){
       if(user.found){
         state.xp = Number(user.xp) || 0;
         state.hasSubscription = !!user.hasSubscription;
+        if(user.frozenUntil){ startQuestsFreeze(user.frozenUntil); }
         document.getElementById('userCity').textContent = user.city || '—';
         renderSubscriptionStatus(user.hasSubscription, user.subscriptionUntil);
         renderCoinBalance(Number(user.coins) || 0);
@@ -2118,6 +2133,32 @@ function revertQuestDoneUI(card, xp, coins){
 var HONESTY_MODAL_KEY = 'mwHonestyModalSeen';
 var mwPendingQuest = null;
 
+var mwFreezeInterval = null;
+
+function startQuestsFreeze(untilMs){
+  var wrap = document.getElementById('questsLockWrap');
+  var timerEl = document.getElementById('questsFreezeTimer');
+  wrap.classList.add('locked');
+
+  function tick(){
+    var msLeft = untilMs - Date.now();
+    if(msLeft <= 0){
+      clearInterval(mwFreezeInterval);
+      wrap.classList.remove('locked');
+      showToast('Можно продолжать — заморозка снята');
+      return;
+    }
+    var totalSeconds = Math.ceil(msLeft / 1000);
+    var mm = Math.floor(totalSeconds / 60);
+    var ss = totalSeconds % 60;
+    timerEl.textContent = mm + ':' + (ss < 10 ? '0' : '') + ss;
+  }
+
+  if(mwFreezeInterval) clearInterval(mwFreezeInterval);
+  tick();
+  mwFreezeInterval = setInterval(tick, 1000);
+}
+
 function closeFrozenOverlay(){
   document.getElementById('frozenOverlay').classList.remove('show');
 }
@@ -2211,8 +2252,7 @@ function proceedWithQuest(card, btn, reflectionAnswer){
         if(data.alreadyDone){ showToast('Уже выполнено сегодня'); return; }
 
         if(data.reason === 'frozen'){
-          document.getElementById('frozenText').textContent = 'Задания заморожены ещё на ' + (data.minutesLeft || 15) + ' мин — похоже, вы торопитесь больше, чем стоит.';
-          document.getElementById('frozenOverlay').classList.add('show');
+          startQuestsFreeze(data.frozenUntil || (Date.now() + (data.minutesLeft || 15) * 60000));
           return;
         }
         if(data.reason === 'reflection_required'){
