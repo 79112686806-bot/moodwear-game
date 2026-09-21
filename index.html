@@ -65,7 +65,7 @@ body{
 .mg-reflink:active{ color:#39FF6A; }
 
 .mg-levelcard{
-  background:#0d0d0d; border:1px solid #232326; border-radius:18px;
+  background:linear-gradient(165deg, #1a1a20, #0a0a0c); border:1px solid #232326; border-radius:18px;
   padding:16px 18px;
   transition:border-color .4s ease, box-shadow .4s ease;
 }
@@ -104,7 +104,7 @@ body{
 /* ---------- карточки заданий ---------- */
 .mg-quest{
   display:flex; gap:14px; align-items:flex-start;
-  background:linear-gradient(180deg, #141418, #0d0d0d);
+  background:linear-gradient(165deg, #1a1a20, #0a0a0c);
   border:1px solid #232326; border-radius:16px;
   padding:15px 16px; margin-bottom:10px;
   transition:border-color .25s ease, transform .15s ease, opacity .3s ease, box-shadow .25s ease;
@@ -127,7 +127,7 @@ body{
   cursor:pointer; transition:all .2s ease; color:#7a7a80;
   position:relative; overflow:hidden;
 }
-.mg-quest-btn:active{ transform:scale(.9); }
+/* :active-сжатие убрано — теперь единая pop+glow анимация на нажатие ниже (mg-press-anim) */
 .mg-quest.done .mg-quest-btn{ background:#39FF6A; border-color:#39FF6A; color:#0d0d0d; }
 .mg-quest-btn.done-static{
   background:#39FF6A; border:1.5px solid #39FF6A; color:#0d0d0d;
@@ -175,7 +175,7 @@ body{
 /* ---------- магазин баллов ---------- */
 .mg-coin-banner{
   display:flex; align-items:center; gap:14px;
-  background:#0d0d0d; border:1px solid #232326; border-radius:18px;
+  background:linear-gradient(165deg, #1a1a20, #0a0a0c); border:1px solid #232326; border-radius:18px;
   padding:16px 18px;
   box-shadow:0 0 30px -16px rgba(255,201,60,0.5);
 }
@@ -185,7 +185,7 @@ body{
 
 .mg-shop-item{
   display:flex; gap:14px; align-items:center;
-  background:#0d0d0d; border:1px solid #232326; border-radius:16px;
+  background:linear-gradient(165deg, #1a1a20, #0a0a0c); border:1px solid #232326; border-radius:16px;
   padding:15px 16px; margin-bottom:10px;
 }
 .mg-shop-body{ flex:1; min-width:0; }
@@ -223,7 +223,7 @@ body{
 
 .mg-shop-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
 .mg-shop-tile{
-  aspect-ratio:1; border-radius:16px; background:#0d0d0d; border:1px solid #232326;
+  aspect-ratio:1; border-radius:16px; background:linear-gradient(165deg, #1a1a20, #0a0a0c); border:1px solid #232326;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
   padding:10px; text-align:center; cursor:pointer; transition:all .2s ease;
 }
@@ -240,14 +240,14 @@ body{
 .mg-shop-howto li:last-child{ margin-bottom:0; }
 .mg-shop-mini-avatar{ width:34px; height:34px; border-radius:10px; font-size:16px; flex-shrink:0; }
 
-.mg-quest[data-color="green"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(57,255,106,.4); }
-.mg-quest[data-color="yellow"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(255,201,60,.4); }
-.mg-quest[data-color="red"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(255,92,92,.4); }
-.mg-quest[data-color="lilac"] .mg-quest-icon{ box-shadow:inset 0 0 0 1px rgba(170,177,240,.4); }
+.mg-quest[data-color="green"] .mg-quest-icon{ box-shadow:0 0 16px -3px rgba(57,255,106,.75); border:1px solid rgba(57,255,106,.5); }
+.mg-quest[data-color="yellow"] .mg-quest-icon{ box-shadow:0 0 16px -3px rgba(255,201,60,.75); border:1px solid rgba(255,201,60,.5); }
+.mg-quest[data-color="red"] .mg-quest-icon{ box-shadow:0 0 16px -3px rgba(255,92,92,.75); border:1px solid rgba(255,92,92,.5); }
+.mg-quest[data-color="lilac"] .mg-quest-icon{ box-shadow:0 0 16px -3px rgba(170,177,240,.75); border:1px solid rgba(170,177,240,.5); }
 
 /* ---------- достижения ---------- */
 .mg-ach-row{
-  display:flex; align-items:center; gap:12px; background:#0d0d0d; border:1px solid #232326;
+  display:flex; align-items:center; gap:12px; background:linear-gradient(165deg, #1a1a20, #0a0a0c); border:1px solid #232326;
   border-radius:14px; padding:12px 14px; margin-bottom:10px; transition:border-color .3s ease, box-shadow .3s ease;
 }
 .mg-ach-row.unlocked{ border-color:#aab1f0; box-shadow:0 0 16px -8px rgba(170,177,240,0.5); }
@@ -270,7 +270,7 @@ body{
 /* ---------- награды ---------- */
 .mg-prize{
   display:flex; gap:12px; align-items:center;
-  background:#0d0d0d; border:1px solid #232326; border-radius:16px;
+  background:linear-gradient(165deg, #1a1a20, #0a0a0c); border:1px solid #232326; border-radius:16px;
   padding:14px 16px; margin-bottom:10px;
 }
 .mg-prize.reached{ border-color:rgba(57,255,106,.45); }
@@ -342,7 +342,7 @@ body{
 .mg-signal-overlay.show{ display:flex; opacity:1; }
 .mg-signal-modal{
   width:100%; max-width:420px;
-  background:#0d0d0d; border:1px solid #232326;
+  background:linear-gradient(165deg, #1a1a20, #0a0a0c); border:1px solid #232326;
   border-top-left-radius:24px; border-top-right-radius:24px;
   padding:28px 24px calc(28px + env(safe-area-inset-bottom));
   text-align:center;
@@ -422,7 +422,7 @@ body{
   50%{ box-shadow:0 0 22px 2px rgba(170,177,240,0.55); }
 }
 .mg-code-btn:hover{ background:#aab1f0; }
-.mg-code-btn:active{ transform:scale(.97); }
+/* :active-сжатие убрано — теперь единая pop+glow анимация на нажатие (mg-press-anim) */
 .mg-code-btn.mg-code-success{
   background:#39FF6A; animation:none; box-shadow:0 0 24px rgba(57,255,106,0.6);
 }
@@ -496,6 +496,14 @@ body{
   0%{ transform:translate(-50%,-50%) scale(0); opacity:.9; }
   100%{ transform:translate(-50%,-50%) scale(9); opacity:0; }
 }
+
+/* ---------- «pop» + свечение на нажатие — ощущение что кнопку правда нажали ---------- */
+@keyframes mg-press-bounce{
+  0%{ transform:scale(1); filter:none; }
+  35%{ transform:scale(1.14); filter:brightness(1.35) drop-shadow(0 0 10px rgba(170,177,240,0.85)); }
+  100%{ transform:scale(1); filter:none; }
+}
+.mg-press-anim{ animation:mg-press-bounce .38s cubic-bezier(.34,1.56,.64,1); }
 
 </style>
 </head>
@@ -2348,6 +2356,12 @@ function showToast(text){
     if(getComputedStyle(el).overflow === 'visible'){ el.style.overflow = 'hidden'; }
     el.appendChild(ripple);
     setTimeout(function(){ ripple.remove(); }, 600);
+
+    // тот самый заметный "pop" + свечение при каждом нажатии
+    el.classList.remove('mg-press-anim');
+    void el.offsetWidth; // форсируем перезапуск анимации, если нажали ещё раз быстро
+    el.classList.add('mg-press-anim');
+    setTimeout(function(){ el.classList.remove('mg-press-anim'); }, 400);
   }, { passive: true });
 })();
 
