@@ -212,14 +212,41 @@ body{
   font-family:'Unbounded', Arial, sans-serif; font-size:10px; color:#6a6a70;
   border:1.5px solid #2a2a2e; border-radius:18px; padding:8px 12px;
 }
-.mg-shop-subtabs{ display:flex; gap:8px; padding:0 20px 4px; }
+.mg-shop-subtabs{ display:flex; gap:8px; padding:0 20px 4px; position:relative; }
 .mg-shop-subtab{
   flex:1; height:38px; border-radius:12px; border:1.5px solid #232326;
   background:#0d0d0d; color:#8a8a90; font-family:'Unbounded', Arial, sans-serif;
   font-size:11px; cursor:pointer; transition:all .2s ease;
+  position:relative;
 }
 .mg-shop-subtab.active{ border-color:#aab1f0; color:#F4F4F5; box-shadow:0 0 14px -4px rgba(170,177,240,0.6); }
 .mg-shop-subtabs-4 .mg-shop-subtab{ font-size:9.5px; padding:0 2px; letter-spacing:-.01em; }
+
+/* ---------- подсказка "тут что-то новое" + "листай дальше" ---------- */
+.mg-new-dot{
+  position:absolute; top:-3px; right:-3px;
+  width:9px; height:9px; border-radius:50%;
+  background:#aab1f0; box-shadow:0 0 8px 1px rgba(170,177,240,0.9);
+  animation:mg-new-dot-pulse 1.6s ease-in-out infinite;
+}
+@keyframes mg-new-dot-pulse{
+  0%,100%{ transform:scale(1); opacity:1; }
+  50%{ transform:scale(1.35); opacity:.6; }
+}
+.mg-scroll-hint{
+  position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  width:26px; height:38px; pointer-events:none;
+  display:flex; align-items:center; justify-content:flex-end;
+  background:linear-gradient(90deg, transparent, #07070b 70%);
+}
+.mg-scroll-hint span{
+  color:#aab1f0; font-size:13px;
+  animation:mg-scroll-hint-move 1.3s ease-in-out infinite;
+}
+@keyframes mg-scroll-hint-move{
+  0%,100%{ transform:translateX(0); opacity:.5; }
+  50%{ transform:translateX(4px); opacity:1; }
+}
 
 .mg-shop-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
 .mg-shop-tile{
@@ -657,12 +684,15 @@ body{
 <!-- ===== СТРАНИЦА: ПРОФИЛЬ ===== -->
 <div class="mg-page active" id="page-profile">
 
-  <div class="mg-shop-subtabs" style="overflow-x:auto; flex-wrap:nowrap;">
-    <button class="mg-shop-subtab active" id="ptabProfileBtn" onclick="showProfileSubtab('profile')" style="flex-shrink:0;">👤 Профиль</button>
-    <button class="mg-shop-subtab" id="ptabSubBtn" onclick="showProfileSubtab('subscription')" style="flex-shrink:0;">🔐 Подписка</button>
-    <button class="mg-shop-subtab" id="ptabLevelsBtn" onclick="showProfileSubtab('levels')" style="flex-shrink:0;">🏆 Уровни</button>
-    <button class="mg-shop-subtab" id="ptabRewardsBtn" onclick="showProfileSubtab('rewards')" style="flex-shrink:0;">🎁 Награды</button>
-    <button class="mg-shop-subtab" id="ptabReviewsBtn" onclick="showProfileSubtab('reviews')" style="flex-shrink:0;">💬 Отзывы</button>
+  <div style="position:relative;">
+    <div class="mg-shop-subtabs" style="overflow-x:auto; flex-wrap:nowrap;" id="profileSubtabsRow">
+      <button class="mg-shop-subtab active" id="ptabProfileBtn" onclick="showProfileSubtab('profile')" style="flex-shrink:0;">👤 Профиль</button>
+      <button class="mg-shop-subtab" id="ptabSubBtn" onclick="showProfileSubtab('subscription')" style="flex-shrink:0;">🔐 Подписка</button>
+      <button class="mg-shop-subtab" id="ptabLevelsBtn" onclick="showProfileSubtab('levels')" style="flex-shrink:0;">🏆 Уровни</button>
+      <button class="mg-shop-subtab" id="ptabRewardsBtn" onclick="showProfileSubtab('rewards')" style="flex-shrink:0;">🎁 Награды</button>
+      <button class="mg-shop-subtab" id="ptabReviewsBtn" onclick="showProfileSubtab('reviews')" style="flex-shrink:0;">💬 Отзывы<span class="mg-new-dot" id="reviewsNewDot"></span></button>
+    </div>
+    <div class="mg-scroll-hint" id="profileScrollHint"><span>›</span></div>
   </div>
 
   <div id="ptabProfile">
@@ -2028,7 +2058,31 @@ function showProfileSubtab(name){
   document.getElementById('ptabRewardsBtn').classList.toggle('active', name === 'rewards');
   document.getElementById('ptabReviewsBtn').classList.toggle('active', name === 'reviews');
   if(name === 'rewards') loadMyRewards();
-  if(name === 'reviews') loadReviews();
+  if(name === 'reviews'){
+    loadReviews();
+    // отвечали один раз — дальше точка-новинка больше не нужна
+    localStorage.setItem('mwReviewsTabSeen', '1');
+    var dot = document.getElementById('reviewsNewDot');
+    if(dot) dot.remove();
+  }
+}
+
+// Подсказка "листайте вправо" — только если вкладки правда не влезают,
+// и только пока человек ещё не прокручивал сам
+(function(){
+  var row = document.getElementById('profileSubtabsRow');
+  var hint = document.getElementById('profileScrollHint');
+  if(!row || !hint) return;
+  function checkOverflow(){
+    if(row.scrollWidth <= row.clientWidth + 2){ hint.style.display = 'none'; }
+  }
+  setTimeout(checkOverflow, 400);
+  row.addEventListener('scroll', function(){ hint.style.opacity = '0'; }, { passive:true });
+})();
+
+if(localStorage.getItem('mwReviewsTabSeen')){
+  var _dotToRemove = document.getElementById('reviewsNewDot');
+  if(_dotToRemove) _dotToRemove.remove();
 }
 
 // ---------- Мои награды (история) ----------
