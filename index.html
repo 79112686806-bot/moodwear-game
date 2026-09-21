@@ -245,6 +245,30 @@ body{
 .mg-quest[data-color="red"] .mg-quest-icon{ box-shadow:0 0 16px -3px rgba(255,92,92,.75); border:1px solid rgba(255,92,92,.5); }
 .mg-quest[data-color="lilac"] .mg-quest-icon{ box-shadow:0 0 16px -3px rgba(170,177,240,.75); border:1px solid rgba(170,177,240,.5); }
 
+/* ---------- отзывы ---------- */
+.mg-review{
+  background:linear-gradient(165deg, #1a1a20, #0a0a0c); border:1px solid #232326;
+  border-radius:16px; padding:15px 16px; margin-bottom:12px;
+}
+.mg-review-head{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.mg-review-avatar{
+  width:34px; height:34px; border-radius:10px; flex-shrink:0;
+  background:#101014; border:1px solid #232326;
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+}
+.mg-review-name{ font-size:12.5px; font-weight:700; }
+.mg-review-meta{ font-size:10.5px; color:#8a8a90; display:flex; gap:6px; align-items:center; }
+.mg-review-stars{ color:#FFC93C; font-size:11px; letter-spacing:1px; }
+.mg-review-text{ font-size:12.5px; line-height:1.55; color:#d4d4da; }
+.mg-review-report{
+  margin-left:auto; background:none; border:none; color:#5a5a60; font-size:15px;
+  cursor:pointer; padding:2px 4px; flex-shrink:0;
+}
+.mg-review-report.reported{ color:#FF5C5C; }
+.mg-star-picker{ font-size:30px; letter-spacing:8px; margin:14px 0; cursor:pointer; text-align:center; }
+.mg-star-picker span{ opacity:.3; transition:opacity .15s ease; }
+.mg-star-picker span.on{ opacity:1; filter:drop-shadow(0 0 6px rgba(255,201,60,0.7)); color:#FFC93C; }
+
 /* ---------- достижения ---------- */
 .mg-ach-row{
   display:flex; align-items:center; gap:12px; background:linear-gradient(165deg, #1a1a20, #0a0a0c); border:1px solid #232326;
@@ -633,11 +657,12 @@ body{
 <!-- ===== СТРАНИЦА: ПРОФИЛЬ ===== -->
 <div class="mg-page active" id="page-profile">
 
-  <div class="mg-shop-subtabs mg-shop-subtabs-4">
-    <button class="mg-shop-subtab active" id="ptabProfileBtn" onclick="showProfileSubtab('profile')">👤 Профиль</button>
-    <button class="mg-shop-subtab" id="ptabSubBtn" onclick="showProfileSubtab('subscription')">🔐 Подписка</button>
-    <button class="mg-shop-subtab" id="ptabLevelsBtn" onclick="showProfileSubtab('levels')">🏆 Уровни</button>
-    <button class="mg-shop-subtab" id="ptabRewardsBtn" onclick="showProfileSubtab('rewards')">🎁 Награды</button>
+  <div class="mg-shop-subtabs" style="overflow-x:auto; flex-wrap:nowrap;">
+    <button class="mg-shop-subtab active" id="ptabProfileBtn" onclick="showProfileSubtab('profile')" style="flex-shrink:0;">👤 Профиль</button>
+    <button class="mg-shop-subtab" id="ptabSubBtn" onclick="showProfileSubtab('subscription')" style="flex-shrink:0;">🔐 Подписка</button>
+    <button class="mg-shop-subtab" id="ptabLevelsBtn" onclick="showProfileSubtab('levels')" style="flex-shrink:0;">🏆 Уровни</button>
+    <button class="mg-shop-subtab" id="ptabRewardsBtn" onclick="showProfileSubtab('rewards')" style="flex-shrink:0;">🎁 Награды</button>
+    <button class="mg-shop-subtab" id="ptabReviewsBtn" onclick="showProfileSubtab('reviews')" style="flex-shrink:0;">💬 Отзывы</button>
   </div>
 
   <div id="ptabProfile">
@@ -737,6 +762,22 @@ body{
     </div>
   </div>
 
+  <div id="ptabReviews" style="display:none;">
+    <div class="mg-section">
+      <h2>Отзывы</h2>
+      <div class="mg-coin-banner" id="reviewsRatingBanner" style="align-items:flex-start;">
+        <div>
+          <div class="mg-coin-value" id="reviewsAvgRating" style="color:#FFC93C;">—</div>
+          <div style="font-size:13px; color:#FFC93C; letter-spacing:1px;" id="reviewsAvgStars">☆☆☆☆☆</div>
+          <div class="mg-coin-label" id="reviewsCount">0 отзывов</div>
+        </div>
+        <p class="mg-sub" style="flex:1; margin:0;">Отзывы видны всем игрокам и публикуются под вашим именем в игре.</p>
+      </div>
+      <button class="mg-code-btn" style="width:100%; margin:14px 0;" onclick="openReviewCompose()">Написать отзыв →</button>
+      <div id="reviewsList"><p class="mg-sub">Загружаю…</p></div>
+    </div>
+  </div>
+
 </div>
 
 </div>
@@ -767,6 +808,21 @@ body{
     <h3>Прежде чем начать</h3>
     <p class="mg-sub">Мы не можем это проверить — полагаемся на твою честность 😊<br>Если ты честен(на) — нажми ещё раз на галочку.</p>
     <button class="mg-quest-btn" id="honestyConfirmBtn" style="width:100%; height:48px; border-radius:100px; margin-top:6px;" disabled onclick="confirmHonestyModal()">✓ <span id="honestyCountdown">(5)</span></button>
+  </div>
+</div>
+
+<div class="mg-signal-overlay" id="reviewComposeOverlay">
+  <div class="mg-signal-modal">
+    <div class="mg-signal-emoji">💬</div>
+    <h3>Ваш отзыв</h3>
+    <p class="mg-sub">Увидят все игроки, публикуется под вашим именем.</p>
+    <div class="mg-star-picker" id="reviewStarPicker">
+      <span onclick="setReviewStars(1)">★</span><span onclick="setReviewStars(2)">★</span><span onclick="setReviewStars(3)">★</span><span onclick="setReviewStars(4)">★</span><span onclick="setReviewStars(5)">★</span>
+    </div>
+    <textarea id="reviewTextInput" placeholder="Что понравилось, а что стоит доделать?" style="width:100%; min-height:90px; background:#0d0d0d; border:1px solid #2a2a2e; border-radius:12px; color:#F4F4F5; padding:12px; font-family:inherit; font-size:13px; box-sizing:border-box; margin-bottom:8px; resize:none;"></textarea>
+    <p class="mg-sub" id="reviewComposeError" style="color:#FF5C5C; display:none;"></p>
+    <button class="mg-code-btn" style="width:100%; margin:6px 0 10px;" onclick="submitReview()">Опубликовать</button>
+    <button class="mg-signal-skip" onclick="closeReviewCompose()">Отмена</button>
   </div>
 </div>
 
@@ -1965,15 +2021,124 @@ function showProfileSubtab(name){
   document.getElementById('ptabSubscription').style.display = (name === 'subscription') ? '' : 'none';
   document.getElementById('ptabLevels').style.display = (name === 'levels') ? '' : 'none';
   document.getElementById('ptabRewards').style.display = (name === 'rewards') ? '' : 'none';
+  document.getElementById('ptabReviews').style.display = (name === 'reviews') ? '' : 'none';
   document.getElementById('ptabProfileBtn').classList.toggle('active', name === 'profile');
   document.getElementById('ptabSubBtn').classList.toggle('active', name === 'subscription');
   document.getElementById('ptabLevelsBtn').classList.toggle('active', name === 'levels');
   document.getElementById('ptabRewardsBtn').classList.toggle('active', name === 'rewards');
+  document.getElementById('ptabReviewsBtn').classList.toggle('active', name === 'reviews');
   if(name === 'rewards') loadMyRewards();
+  if(name === 'reviews') loadReviews();
 }
 
 // ---------- Мои награды (история) ----------
 var REWARD_TYPE_ICON = { code: '🧾', manual: '📬', level: '🏆' };
+// ---------- Отзывы ----------
+var mwReviewStars = 0;
+var mwReportedReviews = {}; // review_id -> true, чтобы не давать жаловаться повторно в этой же сессии
+
+function loadReviews(){
+  fetch(GAME_API + '?action=getReviews&_t=' + Date.now(), { cache: 'no-store' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){ renderReviews(data.reviews || [], data.avgRating || 0, data.total || 0); })
+    .catch(function(){
+      document.getElementById('reviewsList').innerHTML = '<p class="mg-sub">Не удалось загрузить отзывы</p>';
+    });
+}
+
+function renderReviews(reviews, avgRating, total){
+  document.getElementById('reviewsAvgRating').textContent = total ? avgRating.toFixed(1) : '—';
+  document.getElementById('reviewsAvgStars').textContent = starsString(Math.round(avgRating));
+  document.getElementById('reviewsCount').textContent = total + (total === 1 ? ' отзыв' : total < 5 ? ' отзыва' : ' отзывов');
+
+  var list = document.getElementById('reviewsList');
+  if(!reviews.length){
+    list.innerHTML = '<p class="mg-sub">Пока нет отзывов — станьте первым</p>';
+    return;
+  }
+  list.innerHTML = '';
+  reviews.forEach(function(rv){
+    var row = document.createElement('div');
+    row.className = 'mg-review';
+    var reported = mwReportedReviews[rv.id];
+    row.innerHTML =
+      '<div class="mg-review-head">' +
+        '<div class="mg-review-avatar">' + escapeHtml(rv.avatar || '🐉') + '</div>' +
+        '<div style="flex:1; min-width:0;">' +
+          '<div class="mg-review-name">' + escapeHtml(rv.name) + '</div>' +
+          '<div class="mg-review-meta"><span class="mg-review-stars">' + starsString(rv.rating) + '</span> · ' + escapeHtml(rv.dateLabel || '') + '</div>' +
+        '</div>' +
+        '<button class="mg-review-report' + (reported ? ' reported' : '') + '" onclick="reportReview(\'' + rv.id + '\', this)" title="Пожаловаться">' + (reported ? '✓' : '⚠') + '</button>' +
+      '</div>' +
+      '<div class="mg-review-text">' + escapeHtml(rv.text) + '</div>';
+    list.appendChild(row);
+  });
+}
+
+function starsString(n){
+  n = Math.max(0, Math.min(5, Math.round(n)));
+  return '★★★★★☆☆☆☆☆'.slice(5 - n, 10 - n);
+}
+
+function openReviewCompose(){
+  mwReviewStars = 0;
+  document.getElementById('reviewTextInput').value = '';
+  document.getElementById('reviewComposeError').style.display = 'none';
+  setReviewStars(0);
+  document.getElementById('reviewComposeOverlay').classList.add('show');
+}
+
+function closeReviewCompose(){
+  document.getElementById('reviewComposeOverlay').classList.remove('show');
+}
+
+function setReviewStars(n){
+  mwReviewStars = n;
+  document.querySelectorAll('#reviewStarPicker span').forEach(function(s, i){
+    s.classList.toggle('on', i < n);
+  });
+}
+
+function submitReview(){
+  var text = document.getElementById('reviewTextInput').value.trim();
+  var errEl = document.getElementById('reviewComposeError');
+
+  if(mwReviewStars < 1){ errEl.textContent = 'Поставьте оценку от 1 до 5 звёзд'; errEl.style.display = ''; return; }
+  if(text.length < 5){ errEl.textContent = 'Напишите чуть больше пары символов'; errEl.style.display = ''; return; }
+
+  fetch(GAME_API, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'submitReview', userId: userId, name: userName, avatar: state.avatar, rating: mwReviewStars, text: text, vkParams: mwLaunchParams })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(!data.success){
+      errEl.textContent = data.reason === 'blocked_words' ? 'В тексте есть недопустимые слова — перефразируйте' : 'Не получилось опубликовать, попробуйте ещё раз';
+      errEl.style.display = '';
+      return;
+    }
+    closeReviewCompose();
+    showToast('Отзыв опубликован, спасибо!');
+    loadReviews();
+  })
+  .catch(function(){
+    errEl.textContent = 'Не получилось опубликовать, попробуйте ещё раз';
+    errEl.style.display = '';
+  });
+}
+
+function reportReview(reviewId, btn){
+  if(mwReportedReviews[reviewId]) return;
+  mwReportedReviews[reviewId] = true;
+  btn.classList.add('reported');
+  btn.textContent = '✓';
+  fetch(GAME_API, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'reportReview', userId: userId, reviewId: reviewId, vkParams: mwLaunchParams })
+  }).catch(function(){});
+  showToast('Спасибо, разберёмся');
+}
+
 function loadMyRewards(){
   var list = document.getElementById('myRewardsList');
   if(!list) return;
